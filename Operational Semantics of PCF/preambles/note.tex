@@ -1,0 +1,10 @@
+\documentclass[10pt,a4paper,twocolumn]{article}
+\usepackage{beamerarticle}
+\usepackage{fullpage}
+\usepackage{microtype}
+\usepackage{hyperref}
+
+\newcounter{saveenumi}
+\newcommand{\seti}{\setcounter{saveenumi}{\value{enumi}}}
+\newcommand{\conti}{\setcounter{enumi}{\value{saveenumi}}}
+

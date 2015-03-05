@@ -1,0 +1,746 @@
+\title{Semantics of Functional Programming}
+\subtitle{Computational Adequacy}
+\author[L.-T. Chen]{Chen, Liang-Ting\\
+  \href{mailto:lxc@iis.sinica.edu.tw}{\texttt{lxc@iis.sinica.edu.tw}}}
+\institute[IIS, Sinica]{Institute of Information Science, Academia Sinica}
+\begin{document}
+\frame{\maketitle}
+
+\begin{frame}{Overview}
+  So far we have given two kinds of semantics for \PCF{}. For a well-typed
+  closed terms $\M$ of
+  type~$\sigma$,
+  \begin{itemize}
+    \item one gives how the well-typed closed term~$\M$ is evaluated to a value~$\V$
+      via the reduction relation~$\M \Downarrow\V$;
+    \item the other defines what the denotation~$\sem{\M}$ of~$\M$ is in a
+      domain~$D_\sigma$. 
+    \end{itemize}
+  In this lecture, we will compare these two approaches and discuss some issues
+  arising from them:
+  \begin{description}[Computational Adequacy]
+    \item[Correctness] $\M \Downarrow \V$ implies $\sem{\M} = \sem{\V}$.
+    \item[Completeness] $\sem{\M} = n$ implies $\M \Downarrow \underline{n}$
+    \item[Computational adequacy]
+      Both of correctness and completeness hold. 
+  \end{description}
+
+\end{frame}
+
+\section{Correctness}
+
+\begin{frame}{$\nat$ values always converges}
+  The bottom element~$\bot$ models the divergence of computation.  A 
+  value of~$\nat$ is meant to be some natural number, so it shouldn't
+  diverge. 
+  \\~\\
+  \begin{lemma}
+    For every value~$\V$ of type~$\nat$, the denotation~$\sem{\V}$ is an
+    element of~$\mathbb{N}$. In particular, $\sem{\V} \neq \bot$.
+  \end{lemma}
+  \begin{proof}
+    By structural induction on values:
+    \begin{columns}[b]
+      \column{.3\textwidth}
+        \begin{prooftree}
+          \AXC{}
+          \UIC{$\zero\;\,\val$}
+        \end{prooftree}
+      \column{.3\textwidth}
+        \begin{prooftree}
+          \AXC{$\M\;\,\val$}
+          \UIC{$\suc\;\M\;\,\val$}
+        \end{prooftree}
+      \column{.3\textwidth}
+        \begin{prooftree}
+          \AXC{$\M\;\,\term$}
+          \UIC{$\lambda x.\, \M\;\,\val$}
+        \end{prooftree}
+      \end{columns}
+  \end{proof}
+\end{frame}
+
+\begin{frame}
+  \begin{theorem}
+    For every two well-typed closed terms~$\M$ and~$\V$, $\M \Downarrow \V$
+    implies $\sem{\M} = \sem{\V}$. 
+  \end{theorem}
+  \begin{proof}[Proof sketch.]
+    Prove $\sem{\M} = \sem{\V} \in \sem{\tau}$ by structural induction on the
+    derivation of~$\M\Downarrow\V$. 
+  \end{proof}
+  ~\\
+    We show the case ($\Downarrow$-suc) first and the cases
+    ($\Downarrow$-zero) and ($\Downarrow$-lam) are similar and straightforward. 
+    \\~\\
+    \begin{itemize}
+      \item For ($\Downarrow$-suc), we show that $\sem{\suc\;\M}
+        =\sem{\suc\;\V}$ if $\sem{\M} = \sem{\V}$. By definition, we simply
+        calculate its denotation directly:
+        \[
+          \sem{\suc\;\M} = S(\sem{\M}) = S(\sem{\V}) = \sem{\suc\;\V}
+        \]
+        where the middle equality follows from the induction hypothesis. 
+    \end{itemize}
+    ~\\
+    Try to do the cases ($\Downarrow$-zero), ($\Downarrow$-lam), and
+    ($\Downarrow$-$\ifz_0$).
+\end{frame}
+
+\begin{frame}
+  The case ($\Downarrow$-app) is interesting, because there is
+  the binding structure.
+  \\~\\
+  \begin{itemize}
+      \item For ($\Downarrow$-app), we show that $\sem{\M\;\N} = \sem{V}$
+        if $\sem{\M} = \sem{\lambda x.\, \mathsf{E}}$ and $\sem{\mathsf{E}[\N/x]} =
+        \sem{V}$. We calculate the denotation as follows
+        \begin{align*}
+          \sem{\M\;\N} & = \mathit{ev}(\sem{\M}, \sem{\N}) \\
+          & = \mathit{ev}(\sem{\lambda x.\, \mathsf{E}}, 
+          \sem{\N}) \\
+          & = \mathit{ev}(\sem{x : \sigma \vdash \mathsf{E} : \tau},
+          \sem{\N}) \\
+          & = \sem{x : \sigma \vdash \mathsf{E} : \tau}(\sem{\N})
+          = \sem{\mathsf{E}[\N/x]} = \sem{\V}
+        \end{align*}
+        where $\sem{x : \sigma \vdash \mathsf{E} : \tau}(\sem{\N}) =
+        \sem{\mathsf{E}[\N/x]}$ follows from Substitution Lemma.
+        \\~\\
+      \item Complete the cases ($\Downarrow$-$\ifz_1$) and ($\Downarrow$-fix).
+        {\small \emph{Hint.} Consider Substitution Lemma and
+        the properties of the fixpoint operator~$\mu$.}
+    \end{itemize}
+\end{frame}
+
+\begin{frame}<0>
+\begin{itemize}
+  \item For ($\Downarrow$-$\ifz_0$), assuming $\sem{\M}=\sem{\zero} = 0$
+    and $\sem{\M_0} = \sem{V}$ we show that
+    $\sem{\ifz(\M; \M_0; x.\, \M_1)} = \sem{\V}$. We calculate the
+    denotation as follows
+    \begin{align*}
+      & \sem{\ifz(\M;\M_0;x.\,\M_1)} \\
+         = &\mathit{ifz}(\sem{\M}, \sem{\M_0}, \sem{\M_1}) \\
+         = &\mathit{ifz}(0, \sem{V}, \sem{\M_1}) \\
+         = &\sem{V}
+    \end{align*}
+    where the last equation follows from the definition of~$\mathit{ifz}$. 
+  \item For ($\Downarrow$-$\ifz_1$), we show that $\sem{\ifz(\M;\M_0;
+      x.\,\M_1)}$ = \sem{V} if $\sem{\M} = \sem{\suc\;\N} = S(\sem{\N})$
+    and $\sem{\M_1[\N/x]} = \sem{\V}$.
+
+  We know that $\N$ is a value by $\M\Downarrow\suc\;\N$\footnote{Why? See
+    Lecture I}, so $\sem{\N} = n$ for some natural number~$n$. It follows that 
+  \begin{align*}
+       & \sem{\ifz(\M; \M_0; x.\,\M_1)} \\
+     ={} & \mathit{ifz}(\sem{\M}, \sem{\M_0}, \sem{x : \nat\vdash \M_1 :
+      \tau}) \\
+     ={} & \mathit{ifz}(\sem{\N} + 1, \sem{\M_0}, \sem{x : \nat\vdash \M_1 :
+      \tau}) \\
+     ={} & \sem{x : \nat \vdash \M_1}(\sem{\N}) \\
+     ={} &\sem{\M_1[\N/x]} = \sem{\V}
+  \end{align*}
+  where the last but one equality follows from Substitution Lemma.
+
+  \item For ($\Downarrow$-fix), we show that $\sem{\fix x.\,\M} = \sem{\V}$ if
+    $\sem{\M[\fix x.\,\M/x]} = \sem{\V}$.  Let $f \defeq \sem{x : \sigma \vdash
+      \M : \sigma}$.  We
+    calculate the denotation as follows
+    \begin{align*}
+      \sem{\fix x.\,\M}
+      & = \mu f = f(\mu f) \\
+      & = \sem{x : \sigma \vdash \M : \sigma}(\sem{\fix x.\, \M}) \\
+      & = \sem{\M[\fix x.\, \M/x]} = \sem{V}
+    \end{align*}
+    where the last but one equality follows from Substitution Lemma.
+\end{itemize}
+\end{frame}
+
+\section{Equational reasoning}
+
+\begin{frame}{Logical Equivalence}
+  \begin{definition}[Applicative approximation]
+    For each type~$\sigma$, we define a relation~$\precsim_\sigma$ between
+    well-typed closed terms $\vdash \M : \sigma$. 
+    \begin{enumerate}
+      \item For $\nat$, define
+        \[
+          \M \precsim_{\alert{\nat}} \N
+        \]
+        if for all $n \in \mathbb{N}$, 
+          $\M \Downarrow \underline{n}$ implies $\N \Downarrow \underline{n}$
+      \item For $\sigma \to \tau$, define
+        \[
+          \M \precsim_{\alert{\sigma \to\tau}} \N
+        \]
+          if $\M\;P \precsim_{\tau} \N\;P$, 
+          for every well-typed closed term~$P$.
+    \end{enumerate}
+  \end{definition}
+  ~\\
+
+  Two well-typed closed terms $\M$ and $\N$ of the same type~$\sigma$ are
+  \textbf{logically equivalent} denoted~$\M\simeq_\sigma\N$ if $\M
+  \precsim_\sigma \N$ and
+  $\M \succsim_\sigma \N$. 
+\end{frame}
+
+\begin{frame}
+  The relation $\precsim_\sigma$ is a preorder, so
+  $\simeq_\sigma$ is indeed an equivalence.\footnote{ Why? Prove it.
+    Note that an equivalence relation is defined to be a reflexive, symmetric,
+    and transitive relation.
+  }
+  \\~\\
+
+  \begin{proposition}
+    The logical equivalence~$\simeq_\sigma$ is an equivalence relation.
+  \end{proposition}
+  ~\\
+
+  A well-typed closed term $\M$ can be replaced by another well-typed closed
+  term $\N$ without changing
+  its result if $\M \simeq_\sigma \N$.
+  \\~\\
+    \begin{example}
+      The following two well-typed closed terms are logically equivalent:
+      \[
+        \lambda x.\, x : \nat \to \nat \quad\text{and}\quad
+        \lambda x.\, \mathtt{pred}\; (\mathtt{suc}\; x) : \nat \to \nat
+      \]
+    \end{example}
+\end{frame}
+
+\begin{frame}{Reduction respects logical equivalence}
+  Recall that from $\M \leadsto^* \M'$ and $\M' \Downarrow \V$
+  it follows that $\M \Downarrow \V$ in the agreement between $\leadsto$ and
+  $\Downarrow$. 
+  \\~\\
+  \begin{proposition}
+    Let $\M$ and $\M'$ be well-typed closed terms of type~$\sigma$. 
+    If $\M \leadsto^* \M'$, then $\M \succsim_\sigma \M'$. 
+  \end{proposition}
+  ~\\
+  The other direction follows from the determinacy and values cannot be
+  reduced further:
+  \\~\\
+  \begin{proposition}
+    For every $\M \Downarrow \V$ and $\M \leadsto^* \M'$, 
+    we have $\M' \Downarrow \V$. 
+  \end{proposition}
+  Therefore, if $\M \leadsto^* \M'$, then $\M \simeq_\sigma \M'$. 
+\end{frame}
+\note{
+  \begin{proof}
+    We prove it by induction on~$\sigma$. 
+    \begin{description}
+      \item[$\nat$] If $\M' \Downarrow \underline{n}$,
+        then as we have shown in the agreement between~$\leadsto$
+        and~$\Downarrow$ from $\M \leadsto \M'$ it follows $\M \Downarrow
+        \underline{n}$.  Therefore, $\M \succsim_\nat \M'$. 
+      \item[$\sigma\to\tau$]
+        By assumption that~$\M \leadsto \M'$ and ($\leadsto$-lapp), it follows
+        that $\M\; P \leadsto \M'\; P$ for every term.  By induction
+        hypothesis, it follows that $\M\;P \succsim_\tau\M'\;P$ for every
+        well-typed closed term of
+        type~$\sigma$, so $\M \succsim_{\sigma\to\tau} \M'$.
+    \end{description}
+  \end{proof}
+}
+\begin{frame}
+  However, logical equivalence goes beyond reduction.  
+  Consider the following two well-typed closed terms of type~$\nat\to\nat\to\nat$:
+    \[
+      \lambda x.\, \lambda y.\, x + \alert{y}
+    \]
+    and 
+    \[
+      \lambda x.\, \lambda y.\, \alert{y} + x
+    \]
+    Surely the addition of natural numbers are commutative, but \emph{why?}
+    \\~\\
+
+    By definition they are already values, so they cannot be reduced to
+    each other. 
+    \\~\\
+    \begin{remark}
+      We can show directly that these two well-typed closed terms are logically
+      equivalent in dependent type theory. Yet, we will present an external
+      approach using denotational semantics in the absense of
+      the identity type. 
+    \end{remark}
+\end{frame}
+
+%\begin{frame}{Observational equivalence}
+%  Another proposal of equivalence between programs is given by
+%  \emph{observations} or say, \emph{measurements}:
+%  \begin{definition}[Observational approximation]
+%    Define a relation~$\lesssim_\sigma$ for each type~$\sigma$ by
+%    \[
+%      \M \lesssim_\sigma \N
+%      \quad\text{if}\quad
+%      \forall P \in \mathsf{Prg}_{\sigma\to\nat}.\, 
+%      P\;\M \mathrel{\precsim_\nat} P\;\N
+%    \]
+%   Two programs~$\M$ and $\N$ of type~$\sigma$ are \textbf{observationally
+%     equivalent} if $\M \lesssim_\sigma \N$ and $\N \lesssim_\sigma \M$. 
+%  \end{definition}
+%
+%\end{frame}
+%
+%\begin{frame}{Observational equivalence}
+%  To avoid the universal quantifier, one may expect that $\sem{\M} = \sem{\N}$
+%  implies $\M \Downarrow \N$ for all~$\M$, $\N$, but it is 
+%  impossible because of ($\Downarrow$-lam). E.g.
+%    \[
+%      \sem{\lambda x.\, x}(n) = n  
+%       = (n + 1) - 1 = 
+%      \sem{\lambda x.\, \mathtt{pred}\;(\suc\;x)}(n)
+%    \]
+%  We can, however, observe programs on~$\nat$.
+%  \begin{definition}[Observational approximation]
+%    For every type~$\sigma$, define a relation $\lesssim_\sigma$ for
+%    programs of type~$\sigma$ as 
+%    \[
+%      \M \lesssim_\sigma \N \quad\text{if}\quad 
+%      P\; \M \precsim_\nat P\;\N.
+%    \]
+%    for every program~$P$ of type~$\sigma\to\nat$. 
+%    Two programs~$\M$ and~$\N$ are \textbf{observationally equivalent}
+%    if $\M \lesssim \N$ and $\N \lesssim \M$.
+%  \end{definition}
+%\end{frame}
+%
+%\begin{frame}{Equivalences}
+%  We have introduced three different equivalences between programs:
+%  \begin{enumerate}
+%    \item Denotational equivalence $\sem{\M} = \sem{\N}$
+%    \item Logical equivalence $\M \simeq \N$
+%    \item Observational equivalence $\M \lesssim \N$ and $\N \lesssim \M$. 
+%  \end{enumerate}
+%  In the following, we will show that these three equivalences
+%  are actually the same, using \emph{computational adequacy}. Therefore, we can
+%  avoid the universal quantifier and ensure the correctness of programs by
+%  calculating their denotations. 
+%\end{frame}
+\section{Computational adequacy}
+\begin{frame}
+  In the following, we will show that for every $\vdash \M : \nat$ if
+  $\sem{\M} = n$ then $\M$ reduces to the numeral~$\underline{n}$.
+  \\~\\
+  \begin{itemize}
+    \item Define a relation $\alert{R_\sigma}$ for each type~$\sigma$ between
+      the domain~$\sem{\sigma} = D_\sigma$ and the collection of
+      well-typed closed terms of type~$\sigma$:
+      \[
+        \alert{R_{\sigma}} \subseteq D_\sigma \times \mathsf{Prg}_\sigma
+      \]
+      for every type~$\sigma$ where $\mathsf{Prg}_\sigma = \set{ \M }{{}\vdash
+        \M : \sigma}$.
+      \\~\\
+    \item Then show that $\sem{\M}\mathrel{\alert{R_\sigma}} \M$ for every
+      well-typed closed term~$\M$ of type~$\sigma$, and by construction
+      $\sem{\M} \mathrel{\alert{R_\nat}} \M$ is equivalent to that
+      $\sem{M} = n$ implies $\M \Downarrow \underline{n}$. 
+  \end{itemize}
+  ~\\
+
+  With this property, we can conclude that denotational equivalence entails
+  logical equivalence.\footnote{
+    But, the converse may fail. 
+  }
+\end{frame}
+\begin{frame}{Logical relation between semantics and syntax}
+\begin{definition}[Logical relation]
+  For every type~$\sigma$, define a relation~$\alert{R_\sigma} \subseteq
+  D_\sigma \times \mathsf{Prg}_\sigma$ inductively as follows:
+  \begin{itemize}
+    \item $d \alert{\mathrel{R_\nat}}\M$
+      if $\M$ reduces to~$\underline{n}$
+      whenever $d$ is a natural number:
+      \[
+        d \alert{\mathrel{R_\nat}} \M
+        \quad\text{if}\quad \forall n \in \mathbb{N}.\,
+        d = n \implies \M \Downarrow \underline{n}
+      \]
+    \item for every function type, $f \alert{\mathrel{R_{\sigma\to\tau}}} \M$
+      if the outcome is always related whenever the input is related:
+      \[
+        f \alert{\mathrel{R_{\sigma\to\tau}}} \M
+        \quad\text{if}
+      \]
+      \[
+        \forall d, 
+        \N.\, 
+        d \alert{\mathrel{R}_\sigma} \N \implies f(d) \alert{\mathrel{R_\tau}} \M\;\N
+      \]
+  \end{itemize}
+\end{definition}
+For example, $0 \alert{\mathrel{R_\nat}} \zero$, and
+$n + 1 \alert{\mathrel{R_\nat}}
+\suc\;\M$ wherever $n \alert{\mathrel{R_\nat}} \M$ for~$n \in \mathbb{N}$. 
+
+\end{frame}
+\begin{frame}{Properties of~$R_\sigma$}
+\begin{lemma}
+  \label{lem:property_logical_relation}
+  For every type~$\sigma$, the following statements are true:
+  \begin{enumerate}
+    \item If $d' \sqsubseteq d$ and $d\alert{\mathrel{R_\sigma}}\M$, then
+      $d' \alert{\mathrel{R_\sigma}} \M$; 
+    \item For every $\M \in \mathsf{Prg}_\sigma$, the set
+      \[
+        R_\sigma \M \defeq \set{ d \in D_\sigma}{ d \alert{\mathrel{R_\sigma}}
+          \M}
+      \]
+      contains~$\bot$ and is closed under directed sups;\footnote{
+        Let $S$ be an arbitrary directed subset of~$D_\sigma$, 
+        if $d \alert{\mathrel{R_\sigma}} \M$ for every~$d \in S$, then 
+        $\bigsqcup S \alert{\mathrel{R_\sigma}} \M$. 
+      }
+    \item If $d \alert{\mathrel{R_\sigma}} \M$ and $M \precsim_\sigma \M'$, then
+      $d \alert{\mathrel{R_\sigma}} \M'$. 
+  \end{enumerate}
+\end{lemma}
+\begin{proof}
+  By induction on~$\sigma$.
+\end{proof}
+\end{frame}
+
+\begin{frame}
+  \begin{lemma}[General recursion]
+    If we have $f \alert{\mathrel{R_{\sigma\to\sigma}}} (\lambda x.\, \M)$, then
+    $\mu(f) \alert{\mathrel{R_\sigma}} (\fix x.\, \M)$. 
+  \end{lemma}
+\begin{proof}[Proof sketch.]
+  By definition~$\mu(f)$ is the directed supremum  of
+  the following directed sequence 
+  \[
+    \bot \sqsubseteq f(\bot) \sqsubseteq f^2(\bot)
+    \sqsubseteq \cdots \sqsubseteq f^i(\bot) \sqsubseteq
+    \cdots, 
+  \]
+  so it suffices to show that
+  \[
+    f^i(\bot) \alert{\mathrel{R_\sigma}} (\fix x.\, \M)
+  \]
+  for every $i \in \mathbb{N}$, because $R_\sigma(\fix x.\M)$ is closed under
+  directed sups. We prove it by induction on~$i$ and properties of~$R_\sigma$.
+\end{proof}
+\end{frame}
+
+\begin{frame}
+  The complete proof is listed below.
+  \begin{description}
+    \item[For $i = 0$:] By definition $f^0(\bot) = \bot$, so
+      $\bot \alert{\mathrel{R_\sigma}} (\fix x.\, \M)$ follows.
+      \\~\\
+    \item[For $i = n + 1$:]
+      By the assumption~$f\alert{\mathrel{R_{\sigma\to\sigma}}}(\lambda x.\M)$, it
+      follows that
+      \[
+        f^{n+1}(\bot)
+        \alert{\mathrel{R_\sigma}} (\lambda x.\,\M)\; (\fix x.\,\M)
+      \]
+      by the induction hypothesis
+      $f^n(\bot) \alert{\mathrel{R_\sigma}} (\fix x.\, \M)$. 
+
+      The RHS reduces to~$\M[\fix x.\M /x]$ and $\fix x.\M \leadsto
+      \M[\fix x.\M / x]$, so the RHS is logically equivalent to~$\fix x.\M$.
+      Hence, it follows that
+      \[
+        f^{n+1}(\bot) \alert{\mathrel{R_\sigma}} (\fix x.\,\M).
+      \]
+  \end{description}
+  ~\\
+  Therefore, it follows that $\bigsqcup_{i \in \mathbb{N}} f^{i}(\bot)
+  \alert{\mathrel{R_\sigma}} (\fix x.\, \M)$. 
+\end{frame}
+\begin{frame}{Substitution Lemm and completeness}
+  \begin{lemma}[Substitution]
+    Let $\Gamma = x_1:\sigma_1, \dots, x_n:\sigma_n$ be a context and $d_i
+    \alert{\mathrel{R_{\sigma_i}}} \N_i$ for all $i = 1, \dots, n$.
+    For every well-typed term~$\M$ we have
+    \[
+      \sem{\, \Gamma \vdash \M : \tau\,}(\vec{d})
+      \alert{\mathrel{R_\tau}}
+      \M[\vec{N}/\vec{x}]
+    \]
+    where $\vec{d}$ stands for $(d_1, \dots, d_n)$ 
+    and $\vec{\N}$ stands for $(\N_1, \dots, \N_n)$.
+  \end{lemma}
+  \begin{theorem}[Completeness]
+    For every~${}\vdash \M:\nat$, we have $\M \Downarrow \underline{n}$
+    if~$\sem{\M} = n$. 
+  \end{theorem}
+  \begin{proof}
+    A special case of the previous lemma:
+    \[
+      \sem{{}\vdash \M:\tau}(*) \alert{\mathrel{R_\sigma}} \M
+    \]
+    where the LHS is~$\sem{\M}$.
+  \end{proof}
+\end{frame}
+
+\begin{frame}{Proof of Substitution Lemma}
+  To prove the lemma, do induction on the typing rules for~\PCF{}. 
+  For convenience, we write
+  \\~\\
+  \[
+    \vec{d} \alert{\mathrel{R}} \vec{\N}
+    \quad\text{for}\quad
+    d_i \alert{\mathrel{R_{\sigma_i}}} \N_i
+    \quad\text{indexed by~$i = 1, \dots, n$}
+  \]
+  ~\\
+  where $\vec{d}$ stands for $(d_1, \dots, d_n)$
+  and $\vec{\N}$ stands for $(\N_1, \dots, \N_n)$.
+  \\~\\
+  \begin{description}
+    \item[(z), (s)] These two cases follow from
+      $0\alert{\mathrel{R}_\nat}\zero$ and $n+1 \alert{\mathrel{R_\nat}}
+      \suc\;\M$ whenever $n \alert{\mathrel{R_\nat}} \M$. 
+  \end{description}
+\end{frame}
+
+\begin{frame}
+  \begin{description}
+    \item[(var)] To show that
+      \[
+        \sem{\dots, x_i : \sigma_i, \dots \vdash x_i : \sigma_i}
+        \alert{\mathrel{R_{\sigma_i}}}
+        x_i[\vec{\N}/\vec{x}]
+      \]
+      we check both sides separately.
+      By definition, we have
+      \[
+        \sem{\dots, x_i : \sigma_i, \dots \vdash x_i : \sigma_i}(\vec{d})
+        = d_i
+        \quad\text{and}\quad
+        [\vec{\N}/\vec{x}] = \N_i.  
+      \]
+      Therefore, from the assumption it follows
+      that $d_i \alert{\mathrel{R_{\sigma}}} \N_i$ for every~$i$.
+  \end{description}
+\end{frame}
+\begin{frame}
+  \begin{description}
+    \item[(abs)] We need to show that
+      \begin{equation}
+        \label{eq:subst_abs}
+        \sem{\Gamma\vdash\lambda x.\,\M : \tau} (\vec{d})
+        \alert{\mathrel{R_{\sigma\to\tau}}}
+          (\lambda x.\, \M)[\vec{\N}/\vec{x}]
+      \end{equation}
+      under the induction hypothesis
+      \[\sem{\Gamma, x : \sigma \vdash \M : \tau} (\vec{d}, d)
+        \alert{\mathrel{R_{\tau}}}
+          \M[\,\vec{\N}, \N\mathrel{/}\vec{x}, x\,].
+      \]
+      \begin{itemize}
+        \item For the LHS, we have by definition
+          \begin{align*}
+            & \sem{\Gamma \vdash \lambda x.\M : \tau}(\vec{d})(d) \\
+            ={}& \sem{\Gamma, x : \sigma \vdash \M : \tau}(\vec{d}, d).
+          \end{align*}
+        \item For the RHS, we have
+          \begin{align*}
+            & (\lambda x.\,\M)[\vec{\N}/\vec{x}]\;\N \\
+            \leadsto{} & (\lambda x.\,\M)[\vec{\N}/\vec{x}][\N/x] \\
+            ={} & (\lambda x.\,\M)[\, \vec{\N}, \N \mathrel{/} \vec{x}, x\,]
+          \end{align*}
+          and it follows that these two terms are logically equivalent. 
+          Thus, \eqref{eq:subst_abs} follows by
+          the definition of~$\mathrel{R_{\sigma\to\tau}}$.
+      \end{itemize}
+  \end{description}
+
+\end{frame}
+
+\begin{frame}
+  \begin{description}
+    \item[(Y)] We show that
+      $\sem{\Gamma \vdash \fix x.\, \M : \sigma}(\vec{d})
+        \alert{\mathrel{R_\sigma}}
+        (\fix x.\,\M)[\vec{\N}/\vec{x}]$
+      under the assumption that
+      \begin{equation}
+        \label{eq:subst_fix}
+        \sem{\Gamma, x : \sigma \vdash \M : \sigma}(\vec{d}, d)
+        \alert{\mathrel{R_\sigma}}
+        \M[\,\vec{\N}, \N/\vec{x}, x\,]
+      \end{equation}
+      Recall the lemma for general recursion. It suffices to show
+      $\Lambda\sem{\Gamma, x : \sigma \vdash \M : \sigma}(\vec{d})
+      \alert{\mathrel{R_{\sigma\to\sigma}}}
+        \lambda x.\, \M[\vec{\N}/ \vec{x}] $
+      or, equivalently 
+      \begin{equation}
+        \label{eq:subst_fix2}
+        \sem{\Gamma, x : \sigma \vdash \M : \sigma}(\vec{d}, d)
+        \alert{\mathrel{R_{\sigma}}}
+        (\lambda x.\, \M[\vec{\N}/\vec{x}])\;\N
+      \end{equation}
+      for every $d \mathrel{R}_\sigma \N$.
+      The RHS can be reduced to
+      \[
+        \M[\vec{\N}/\vec{x}][\N/x]
+        = \M[\,\vec{\N}, \N\mathrel{/}\vec{x}, x\,],
+      \]
+      so \eqref{eq:subst_fix} implies 
+      \eqref{eq:subst_fix2} by logical equivalence.
+    \item[(app), (ifz)] Exercises. 
+  \end{description}
+\end{frame}
+
+\subsection{Applications of adequacy}
+
+\begin{frame}{Applicative approximation coincides with logical relation}
+  \begin{lemma}
+    For every ${}\vdash \M:\sigma$ and ${}\vdash \N : \sigma$,
+    \[
+      \M \precsim_\sigma \N
+      \quad\text{if and only if}\quad
+      \sem{\M} \alert{\mathrel{R_\sigma}} \N.
+    \]
+  \end{lemma}
+  \begin{proof}
+    \begin{description}
+      \item[$\M \precsim_\sigma \N$.] By adequacy, we have
+        $\sem{\M} \alert{\mathrel{R_\sigma}} \M$, so $\sem{\M}
+        \alert{\mathrel{R_\sigma}} \N$. 
+      \item[$\sem{M}\alert{\mathrel{R_\sigma}} \N$.]
+        Prove it by induction on~$\sigma$.
+        \begin{description}[xxxxx]
+          \item[$\nat$:] If $\sem{\M} \alert{\mathrel{R_\nat}} \N$, then $\N
+            \Downarrow \underline{n}$ whenever $\sem{\M} = n$.
+          \item[$\sigma\to\tau$:] For $\sigma\to\tau$, by adequacy, we have
+            $\sem{P}\alert{\mathrel{R_\sigma}} P$ for every~$P$, so by
+            assumption and $\sem{\M\;P} = \sem{\M}(\sem{P})
+            \alert{\mathrel{R_\tau}} \N\;P$.  By induction hypothesis, $\M\;P
+            \precsim_\tau \N\;P$ for every~$P$, so $\M
+            \precsim_{\sigma\to\tau} \N$ by definition.
+        \end{description}
+    \end{description}
+  \end{proof}
+\end{frame}
+
+\begin{frame}
+  \begin{corollary}
+    Given two ${}\vdash \M: \sigma$ and~${}\vdash \N : \sigma$,
+    if $\sem{\M} = \sem{\N}$, then $\M$ and~$\N$ are logically equivalent. 
+  \end{corollary}
+  ~\\
+
+  \begin{proof}
+    \begin{enumerate}
+      \item By adequacy $\sem{\M} \alert{\mathrel{R}} \M$ and by assumption
+        $\sem{\N} = \sem{\M} \alert{\mathrel{R}} \M$, it follows that $\N
+        \precsim \M$.  \item Similarly, 
+        $\sem{\M} \alert{\mathrel{R}} \N$, so $\M \precsim \N$. 
+    \end{enumerate}
+    Hence, $\M$ and $\N$ are logically equivalent.
+  \end{proof}
+  ~\\
+  From this property, techniques and results in denotational semantics can be
+  used to argue logical equivalence and reductions. 
+\end{frame}
+
+\begin{frame}{Compactness}
+  Recall that the semantics of general recursion is the least upper bound of
+  its finite unfoldings 
+  \[
+    \sem{\,\fix x.\, \M\,}
+    = \bigsqcup_{i \in \mathbb{N}} \sem{\,\fix^i x.\, \M\,}
+  \]
+  where $\fix^i x.\, \M$ is defined inductively by
+  \begin{enumerate}
+    \item $\fix^0 x.\, \M \defeq \fix x.\, x$ and
+    \item $\fix^{n+1} x.\, \M \defeq \M[\fix^{n} x.\, \M /x]$
+  \end{enumerate}
+  and $\sem{\fix^i x.\,\M} = \sem{\lambda x.\, \M}^i(\bot)$.
+  \begin{theorem}
+    Suppose that $x \neq y$, 
+    \[
+      y : \sigma \vdash E : \nat
+      \quad\text{and}\quad
+      \vdash \fix x.\, \M : \sigma.
+    \]
+    If $E[ \fix x.\, \M / y] \Downarrow \underline{n}$ then
+    $E[ \fix^m x.\, \M / y] \Downarrow \underline{n}$ for some~$m$.
+  \end{theorem}
+\end{frame}
+
+\begin{frame}
+  \begin{proof}
+    By the Substitution Lemma, we have
+    \[
+      \sem{E[\fix x.\, \M / y]} = \sem{y : \sigma \vdash E : \nat}(\sem{\fix
+        x.\, \M}).
+    \]
+    Let $g \defeq \sem{y : \sigma \vdash E : \nat}$
+    and $f \defeq \sem{x : \sigma \vdash \M : \sigma}$. 
+    \begin{align*}
+      \sem{y : \sigma \vdash E : \nat}(\sem{\fix x.\,\M}) & = g(\mu f) \\
+      & = g(\bigsqcup_{i \in \mathbb{N}} f^i (\bot)) \\ 
+      & = \bigsqcup_{i \in \mathbb{N}} (g \circ f^i)(\bot) = n
+    \end{align*}
+    Therefore there exists some~$m \in \mathbb{N}$ such that $(g \circ
+    f^m)(\bot) = n$. By adequacy, it follows that $E[\fix^m x.\, \M/ y]
+    \Downarrow \underline{n}$.
+  \end{proof}
+\end{frame}
+
+\begin{frame}{Finite unfoldings approximate general recursion} 
+  \begin{lemma}
+    Suppose that~$x : \sigma \vdash \M : \sigma$. Then for every~$i \in
+    \mathbb{N}$, we have
+    \[
+      \fix^i x.\,\M \precsim_\sigma \fix x.\,\M. 
+    \]
+  \end{lemma}
+  The proof is left as an exercise. 
+  \begin{theorem}[Fixed Point Induction]
+    Suppose that $x : \sigma \vdash \M : \sigma$, $x : \sigma \vdash \N
+    :\sigma$ and 
+    \[
+      \fix^i x.\,\M \simeq_\sigma \fix^i x.\,\N
+    \]
+    for every~$i \in \mathbb{N}$.
+    Then, we also have
+    \[
+      \fix x.\,\M
+      \mathrel{\simeq_\sigma}
+      \fix x.\, \N
+    \]
+  \end{theorem}
+\end{frame}
+
+\begin{frame}
+  \begin{proof}
+    We show that $\fix x.\, \M \precsim_\sigma \fix x.\, \N$, or
+    equivalently~$\sem{\fix x.\, \M} \alert{\mathrel{R_\sigma}} \fix x.\, \N$,
+    and the other direction follows similarly. 
+    \\~\\
+    
+    Let $f \defeq \sem{x : \sigma \vdash \M : \sigma}$ and $g \defeq \sem{x :
+      \sigma \vdash \N : \sigma}$. Since the set
+    \[
+      R_\sigma(\fix x.\,\N)
+      = \set{ d \in D_\sigma}{ d \alert{\mathrel{R_\sigma}} \fix x.\,\N}
+    \]
+    is closed under directed supremum, it suffices to show that
+    \[
+      \sem{\fix^i x.\,\M} \alert{\mathrel{R_\sigma}} \fix x.\,\N
+    \]
+    for every~$i$.
+    \\~\\
+    
+    By assumption, we have $\sem{\fix^i x.\,\M}\alert{\mathrel{R_\sigma}}
+    \fix^i x.\,\N$, so it suffices to show that $\fix^i x.\,\N \precsim_\sigma
+    \fix x.\,\N$. By the previous lemma the statement follows. 
+  \end{proof}
+\end{frame}
+
+\end{document}
