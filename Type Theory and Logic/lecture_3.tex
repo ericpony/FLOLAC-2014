@@ -1,0 +1,249 @@
+%!TEX encoding = UTF-8 Unicode
+
+\documentclass[t,compress,hyperref={hidelinks}]{beamer}
+
+%include preamble.fmt
+
+\newcommand{\lectureno}{III}
+
+\begin{document}
+
+%include document.fmt
+
+\title{Type theory and logic}
+\subtitle{Lecture~\lectureno: natural number arithmetic}
+\date{3 July 2014}
+\author{{\fontspec[ExternalLocation=/Library/Fonts/]{DFHeiStd-W5}\href{http://www.cs.ox.ac.uk/people/hsiang-shang.ko/}{柯向上}}}
+\institute{\href{http://www.cs.ox.ac.uk/}{Department of Computer Science}\\ \href{http://www.ox.ac.uk/}{University of Oxford}\\ \href{mailto:Hsiang-Shang.Ko@@cs.ox.ac.uk}{Hsiang-Shang.Ko\char64 cs.ox.ac.uk}}
+
+{\usebackgroundtemplate{\includegraphics[width=\paperwidth]{banner.pdf}}
+\begin{frame}
+\titlepage
+\end{frame}}
+
+
+\begin{frame}{Natural numbers}
+
+\begin{itemize}
+
+\item Formation:
+\[ \AXC{}
+\rule{|Nat|F}\UIC{|Gamma ENTAILS Nat : U|} \DP \]
+
+\item Introduction:
+\[ \AXC{}
+\rule{|Nat|IZ}\UIC{|Gamma ENTAILS zero : Nat|} \DP
+\qquad
+\AXC{|Gamma ENTAILS n : Nat|}
+\rule{|Nat|IS}\UIC{|Gamma ENTAILS suc n : Nat|} \DP \]
+
+\item Elimination:
+\[ \Axiom$\fCenter\begin{tabular}{l}
+|Gamma ENTAILS P : Nat -> U| \\
+|Gamma ENTAILS {-"\rlap{"-} z {-"}\phantom{"-}P{-"}"-} : P SKIP zero| \\
+|Gamma ENTAILS {-"\rlap{"-} s {-"}\phantom{"-}P{-"}"-} : (Pi x Nat) P x -> P (suc x)| \\
+|Gamma ENTAILS {-"\rlap{"-} n {-"}\phantom{"-}P{-"}"-} : Nat|
+\end{tabular}$
+\rule{|Nat|E}\UnaryInf$\fCenter\begin{tabular}{l}
+|Gamma ENTAILS ind P z s n : P n|
+\end{tabular}$ \DP \]
+Logically this is the \emph{induction principle}; computationally this is \emph{primitive recursion}.
+
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}{Natural numbers --- computation rules}
+
+\begin{itemize}
+
+\item Computation:
+\[ \Axiom$\fCenter\begin{tabular}{l}
+|Gamma ENTAILS P : Nat -> U| \\
+|Gamma ENTAILS {-"\rlap{"-} z {-"}\phantom{"-}P{-"}"-} : P SKIP zero| \\
+|Gamma ENTAILS {-"\rlap{"-} s {-"}\phantom{"-}P{-"}"-} : (Pi x Nat) P x -> P (suc x)| \\
+\end{tabular}$
+\rule{|Nat|CZ}\UnaryInf$\fCenter\begin{tabular}{l}
+|Gamma ENTAILS ind P z s SKIP zero = z IN P SKIP zero|
+\end{tabular}$ \DP \]
+
+\[ \Axiom$\fCenter\begin{tabular}{l}
+|Gamma ENTAILS P : Nat -> U| \\
+|Gamma ENTAILS {-"\rlap{"-} z {-"}\phantom{"-}P{-"}"-} : P SKIP zero| \\
+|Gamma ENTAILS {-"\rlap{"-} s {-"}\phantom{"-}P{-"}"-} : (Pi x Nat) P x -> P (suc x)| \\
+|Gamma ENTAILS {-"\rlap{"-} n {-"}\phantom{"-}P{-"}"-} : Nat|
+\end{tabular}$
+\rule{|Nat|CS}\UnaryInf$\fCenter\begin{tabular}{l}
+|Gamma ENTAILS ind P z s (suc n) = s n (ind P z s n) IN P (suc n)|
+\end{tabular}$ \DP \]
+
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}{Inductively defined sets}
+
+The set of natural numbers is \emph{inductively defined}.
+
+In general, every element of an inductively defined set is recursively constructed in a finite number of steps.
+
+Accompanying every inductively defined set is an induction principle, which says that the recursive structure of an element can guide computation, and is formulated as elimination and computation rules in type theory.
+
+In Agda, every datatype can be thought of as being inductively defined, and a structurally recursive function on a datatype (usually using pattern matching) can be thought of as syntactic sugar for an invocation of its induction principle.
+
+\marker{Exercise} Define predecessor, addition, and multiplication with |ind|.
+
+\end{frame}
+
+\begin{frame}{Identity types}
+
+\emph{Identity types} are also called \emph{propositional equality}, especially when contrasted with judgemental equality.
+
+\begin{itemize}
+\item Formation:
+\[ \AXC{|Gamma ENTAILS A : U|} \AXC{|Gamma ENTAILS t : A|} \AXC{|Gamma ENTAILS u : A|}
+\rule{|Id|F}\TIC{|Gamma ENTAILS Id A t u : U|} \DP \]
+\item Introduction:
+\[ \AXC{|Gamma ENTAILS t : A|}
+\rule{|Id|I}\UIC{|Gamma ENTAILS refl t : Id A t t|} \DP \]
+\end{itemize}
+
+\marker{Exercise} Assume |Gamma ENTAILS t = u IN A| and derive |Gamma ENTAILS refl t : Id A t u|.
+
+\end{frame}
+
+\begin{frame}{Identity \kern-1pt types \kern-1pt --- \kern-1pt (simplified) \kern-1pt elimination \kern-1pt and \kern-1pt computation}
+
+\begin{itemize}
+
+\item Elimination:
+\[ \Axiom$\fCenter\begin{tabular}{l}
+|Gamma ENTAILS P : A -> U| \\
+|Gamma ENTAILS {-"\rlap{"-} t {-"}\phantom{"-}P{-"}"-} : A| \\
+|Gamma ENTAILS {-"\rlap{"-} p {-"}\phantom{"-}P{-"}"-} : P t| \\
+|Gamma ENTAILS {-"\rlap{"-} u {-"}\phantom{"-}P{-"}"-} : A| \\
+|Gamma ENTAILS {-"\rlap{"-} q {-"}\phantom{"-}P{-"}"-} : Id A t u|
+\end{tabular}$
+\rule{|Id|E}\UnaryInf$\fCenter\begin{tabular}{l}
+|Gamma ENTAILS transport P p q : P u|
+\end{tabular}$ \DP \]
+
+\item Computation:
+\[ \AXC{|Gamma ENTAILS P : A -> U|} \AXC{|Gamma ENTAILS t : A|} \AXC{|Gamma ENTAILS p : P t|}
+\rule{|Id|C}\TIC{|Gamma ENTAILS transport P p (refl t) = p IN P t|} \DP \]
+
+\end{itemize}
+
+\marker{Exercise} Prove
+\begin{align*}
+& |(Pi A U) (Pi B U) (Pi f (A -> B))| \\
+& \quad |(Pi x A) (Pi y A) Id A x y -> Id B (f x) (f y)|
+\end{align*}
+
+\end{frame}
+
+\begin{frame}{|Id| is an equivalence relation}
+
+|Id| is obviously reflexive --- we can derive
+\[ |ENTAILS \A BIND SKIP \x BIND refl x : (Pi A U) (Pi x A) Id A x x| \]
+
+\marker{Exercise} Prove that |Id| is symmetric and transitive, i.e.,
+\[ |(Pi A U) (Pi x A) (Pi y A) Id A x y -> Id A y x| \]
+and
+\begin{align*}
+& |(Pi A U) (Pi x A) (Pi y A) (Pi z A)| \\[.5ex]
+& \qquad |Id A x y -> Id A y z -> Id A x z|
+\end{align*}
+
+\end{frame}
+
+\begin{frame}{Identity types --- general elimination and computation}
+
+\begin{itemize}
+
+\item Elimination:
+\[ \Axiom$\fCenter\begin{tabular}{l}
+|Gamma ENTAILS P : (Pi x A) (Pi y A) Id A x y -> U| \\
+|Gamma ENTAILS {-"\rlap{"-} p {-"}\phantom{"-}P{-"}"-} : (Pi z A) P z z SKIP (refl z)| \\
+|Gamma ENTAILS {-"\rlap{"-} t {-"}\phantom{"-}P{-"}"-} : A| \\
+|Gamma ENTAILS {-"\rlap{"-} u {-"}\phantom{"-}P{-"}"-} : A| \\
+|Gamma ENTAILS {-"\rlap{"-} q {-"}\phantom{"-}P{-"}"-} : Id A t u|
+\end{tabular}$
+\rule{|Id|E}\UnaryInf$\fCenter\begin{tabular}{l}
+|Gamma ENTAILS J P p q : P t u q|
+\end{tabular}$ \DP \]
+
+\item Computation:
+\[ \Axiom$\fCenter\begin{tabular}{l}
+|Gamma ENTAILS P : (Pi x A) (Pi y A) Id A x y -> U| \\
+|Gamma ENTAILS {-"\rlap{"-} p {-"}\phantom{"-}P{-"}"-} : (Pi z A) P z z SKIP (refl z)| \\
+|Gamma ENTAILS {-"\rlap{"-} t {-"}\phantom{"-}P{-"}"-} : A|
+\end{tabular}$
+\rule{|Id|C}\UnaryInf$\fCenter\begin{tabular}{l}
+|Gamma ENTAILS J P p SKIP (refl t) = p t IN P t t SKIP (refl t)|
+\end{tabular}$ \DP \]
+
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}{Peano axioms}
+
+Peano axioms specify an \emph{equational theory} of natural number arithmetic; all of them are provable in type theory.
+
+\begin{itemize}
+
+\item Zero is a natural number. If |n|~is a natural number, so is the successor of~|n|.
+
+\quad --- The introduction rules.
+
+\item Equality on natural numbers is an equivalence relation.
+
+\quad --- We use |Id|, which has been proved to be an equivalence\\
+\quad\phantom{---} relation.
+
+\item The successor operation is an injective function, i.e.,
+\[ |(Pi m Nat) (Pi n Nat) Id Nat m n <-> Id Nat (suc m) (suc n)| \]
+
+\item The successor operation never yields zero, i.e.,
+\[ |(Pi n Nat) NEG Id Nat (suc n) zero| \]
+
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}{Peano axioms}
+
+\begin{itemize}
+
+\item Addition satisfies
+\[ |(Pi n Nat) Id Nat (zero + n) n| \]
+and
+\[ |(Pi m Nat) (Pi n Nat) Id Nat ((suc m) + n) (suc (m + n))| \]
+
+\item Multiplication satisfies
+\[ |(Pi n Nat) Id Nat (zero * n) zero| \]
+and
+\[ |(Pi m Nat) (Pi n Nat) Id Nat ((suc m) * n) (n + m * n)| \]
+
+\item The induction principle holds for natural numbers.
+
+\quad --- The elimination rule.
+
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}{Computational foundation}
+
+In type theory, Peano ``axioms'' (formulated as propositions) are merely consequences, and do not play an important role in actual theorem proving.
+
+We now have a more natural foundation of mathematics based on the idea of typed computation.
+
+The infamous proof of |1 + 1 {-"\kern-.75pt"-} = 2|
+\[ \includegraphics[width=.95\textwidth]{one-plus-one-equals-two.pdf} \]
+is just an automatic check by computation in type theory.
+
+\end{frame}
+
+\end{document}

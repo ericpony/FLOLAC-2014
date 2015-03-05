@@ -1,0 +1,351 @@
+%!TEX encoding = UTF-8 Unicode
+
+\documentclass[t,compress,hyperref={hidelinks}]{beamer}
+
+%include preamble.fmt
+
+\newcommand{\lectureno}{II}
+
+\begin{document}
+
+%include document.fmt
+
+\title{Type theory and logic}
+\subtitle{Lecture~\lectureno: dependent type theory}
+\date{2 July 2014}
+\author{{\fontspec[ExternalLocation=/Library/Fonts/]{DFHeiStd-W5}\href{http://www.cs.ox.ac.uk/people/hsiang-shang.ko/}{柯向上}}}
+\institute{\href{http://www.cs.ox.ac.uk/}{Department of Computer Science}\\ \href{http://www.ox.ac.uk/}{University of Oxford}\\ \href{mailto:Hsiang-Shang.Ko@@cs.ox.ac.uk}{Hsiang-Shang.Ko\char64 cs.ox.ac.uk}}
+
+{\usebackgroundtemplate{\includegraphics[width=\paperwidth]{banner.pdf}}
+\begin{frame}
+\titlepage
+\end{frame}}
+
+\begin{frame}{Indexed families of sets (predicates)}
+
+Common mathematical statements involve predicates and universal/existential quantification.
+
+For example: ``For every |x : Nat|, if |x|~is not zero, then there exists |y : Nat| such that |x|~is equal to |1 + y|.''
+
+In type theory, a predicate on~|A| has type |A -> U| --- a \emph{family of sets} indexed by the domain~|A|.
+For example:
+\[ |ENTAILS \x BIND {-"\text{``if }"-} x {-"\text{\kern1pt is zero then }"-} BOT {-"\text{\kern1pt else }"-} TOP {-"\text{\kern-.1em''''}"-} : Nat -> U| \]
+
+\marker{Remark} The above treatment is in fact unfounded in our current theory. Why?
+
+\end{frame}
+
+\begin{frame}{Dependent product types (universal quantification)}
+
+\begin{itemize}
+
+\item Formation:
+\[ \AXC{|Gamma ENTAILS A : U|} \AXC{|Gamma ENTAILS B : A -> U|}
+\rule{$\Pi$F}\BIC{|Gamma ENTAILS (Pi x A) B x : U|} \DP \]
+\item Introduction:
+\[ \AXC{|Gamma, x : A ENTAILS t : B x|}
+\rule{$\Pi$I}\UIC{|Gamma ENTAILS \x BIND t : (Pi x A) B x|} \DP \]
+\item Elimination:
+\[ \AXC{|Gamma ENTAILS f : (Pi x A) B x|} \AXC{|Gamma ENTAILS a : A|}
+\rule{$\Pi$E}\BIC{|Gamma ENTAILS f a : B a|} \DP \]
+
+\end{itemize}
+
+\marker{Exercise} Let |Gamma DEFEQ A : U, B : U, C : A -> B -> U|.
+Derive
+\[ |Gamma ENTAILS _ : ((Pi x A) (Pi y B) C x y) -> (Pi y B) (Pi x A) C x y| \]
+
+\end{frame}
+
+\begin{frame}{Dependent sum types (existential quantification)}
+
+\begin{itemize}
+
+\item Formation:
+\[ \AXC{|Gamma ENTAILS A : U|} \AXC{|Gamma ENTAILS B : A -> U|}
+\rule{$\Sigma$F}\BIC{|Gamma ENTAILS (Sigma x A) B x : U|} \DP \]
+\item Introduction:
+\[ \AXC{|Gamma ENTAILS a : A|} \AXC{|Gamma ENTAILS b : B a|}
+\rule{$\Sigma$I}\BIC{|Gamma ENTAILS (a, b) : (Sigma x A) B x|} \DP \]
+\item Elimination:
+\[ \AXC{|Gamma ENTAILS p : (Sigma x A) B x|}
+\rule{$\Sigma$EL}\UIC{|Gamma ENTAILS fst p : A|} \DP
+\quad
+\AXC{|Gamma ENTAILS p : (Sigma x A) B x|}
+\rule{$\Sigma$ER}\UIC{|Gamma ENTAILS snd p : B (fst p)|} \DP \]
+
+\end{itemize}
+
+\marker{Exercise} Let |Gamma DEFEQ A : U, B : U, C : A -> B -> U|. Derive
+\[ |Gamma ENTAILS _ : ((Sigma p (A TIMES B)) C (fst p) (snd p)) -> (Sigma x A) (Sigma y B) C x y| \]
+
+\end{frame}
+
+\begin{frame}{Exercises}
+
+Let |Gamma DEFEQ A : U, B : A -> U, C : A -> U|. Derive
+\[ |Gamma ENTAILS _ : ((Pi x A) B x TIMES C x) <-> ((Pi y A) B y) TIMES ((Pi z A) C z)| \]
+\[ |Gamma ENTAILS _ : ((Sigma x A) B x PLUS C x) <-> ((Sigma y A) B y) PLUS ((Sigma z A) C z)| \]
+What about
+\[ |Gamma ENTAILS _ : ((Pi x A) B x PLUS C x) <-> ((Pi y A) B y) PLUS ((Pi z A) C z)| \]
+\[ |Gamma ENTAILS _ : ((Sigma x A) B x TIMES C x) <-> ((Sigma y A) B y) TIMES ((Sigma z A) C z)| \]
+?
+
+Now let |Gamma DEFEQ A : U, B : U, R : A -> B -> U|.
+Prove the \emph{axiom of choice}, i.e., derive
+\begin{align*}
+|Gamma ENTAILS _ : {-"\null"-}| & |((Pi x A) (Sigma y B) R x y) ->| \\[.5ex]
+& |(Sigma f (A -> B)) (Pi z A) R z (f z)|
+\end{align*}
+
+\end{frame}
+
+\begin{frame}{Universes}
+
+In our current theory, to form types like |A -> U| where |A : U|, we need to assume |U : U|.
+However, this assumption --- called \emph{impredicativity} --- was shown to lead to inconsistency by Jean-Yves Girard.
+(This result is commonly referred to as \emph{Girard's paradox}.)
+
+We thus need to introduce a \emph{predicative} hierarchy of universes |U(sub 0)|,~|U(sub 1)|, \ldots, up to infinity.
+\begin{itemize}
+\item Smaller universes are elements of larger universes.
+\[ \AXC{}
+\rule{|U|F}\UIC{|Gamma ENTAILS U(sub i) : U(sub (i+1))|} \DP \]
+\item Elements of smaller universes are also elements of larger universes. This is called \emph{cumulativity}.
+\[ \AX$\fCenter|Gamma ENTAILS A : U(sub i)|$
+\rule{cum}\UI$\fCenter|Gamma ENTAILS A : U(sub (i+1))|$ \DP \]
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}{Universe polymorphism and typical ambiguity}
+
+Formation rules and elimination rules have to be revised to be \emph{universe-polymorphic}.
+
+\begin{itemize}
+
+\item For example, the formation rule for coproducts becomes
+\[ \AXC{|Gamma ENTAILS A : U(sub i)|} \AXC{|Gamma ENTAILS B : U(sub j)|}
+\rule{$+$F}\BIC{|Gamma ENTAILS A PLUS B : U(sub (max i j))|} \DP \]
+
+\item The elimination rule for coproducts is
+\[ \AXC{|Gamma ENTAILS q : A + B|} \AXC{|Gamma ENTAILS f : A -> C|} \AXC{|Gamma ENTAILS g : B -> C|}
+\rule{$+$E} \insertBetweenHyps{\hskip.5em}\TIC{|Gamma ENTAILS case q f g : C|} \DP \]
+for which we implicitly assume the following judgements:
+\[ |Gamma ENTAILS A : U(sub i)| \qquad |Gamma ENTAILS B : U(sub j)| \qquad |Gamma ENTAILS C : U(sub k)| \]
+
+\end{itemize}
+
+In practice, however, we can drop the indices (as if assuming |U : U|) because they can be inferred most of the time. (This is called \emph{typical ambiguity}.)
+
+\end{frame}
+
+\begin{frame}{Computation}
+
+Let |Gamma DEFEQ A : U, B : A -> U, C : A -> U|.
+Try to derive
+\[ |Gamma ENTAILS _ : ((Pi p (Sigma x A B x)) C (fst p)) -> (Pi y A) B y -> C y| \]
+\ldots\ and you should notice some problems.
+
+So far we have been concentrating on the \emph{statics} of type theory --- how to match program structure with type structure.
+
+Here we need to invoke the \emph{dynamics} of type theory --- how to \emph{reduce} (rewrite) programs to other programs.
+
+\end{frame}
+
+\begin{frame}{Equality judgements}
+
+We introduce a new kind of judgements stating that two terms should be regarded as the same during typechecking:
+\[ |Gamma ENTAILS t = u IN A| \]
+in which we require that |A|~and everything appearing on the right of the colons in~|Gamma| are judged to be sets, and |t|~and~|u| are judged to be elements of~|A|.
+
+\end{frame}
+
+\begin{frame}{Computation rules}
+
+For each set, (when applicable) we specify additional \emph{computation rules} stating how to eliminate an introductory term.
+This is the type-theoretic manifestation of \emph{Gentzen's inversion principle}: elimination rules should be justified in terms of introduction rules.
+
+For example, for product types we have two computation rules:
+\abovedisplay
+\[ \kern-.75em
+\AXC{|Gamma ENTAILS a : A|} \AXC{|Gamma ENTAILS b : B|}
+\rule{$\times$CL}\insertBetweenHyps{\hskip.75em}\BIC{|Gamma ENTAILS fst (a , b) = a IN A|} \DP
+\quad
+\AXC{|Gamma ENTAILS a : A|} \AXC{|Gamma ENTAILS b : B|}
+\rule{$\times$CR}\insertBetweenHyps{\hskip.75em}\BIC{|Gamma ENTAILS snd (a , b) = b IN B|} \DP \]
+
+\end{frame}
+
+\begin{frame}{More computation rules}
+
+\[ \AXC{|Gamma, x : A ENTAILS t : B|} \AXC{|Gamma ENTAILS a : A|}
+\rule{$\to$C}\BIC{|Gamma ENTAILS (\x BIND t) a = t(subst a x) IN A -> B|} \DP \]
+
+\marker{Notation} The term |t(subst a x)| is the result of \emph{substituting} the term~|a| for all ``free occurrences'' of the variable~|x| in the term~|t|.
+
+
+\[ \AXC{|Gamma ENTAILS a : A|} \AXC{|Gamma ENTAILS f : A -> C|} \AXC{|Gamma ENTAILS g : B -> C|}
+\rule{$+$CL}\TIC{|Gamma ENTAILS case (left a) f g = f a IN C|} \DP \]
+
+\[ \AXC{|Gamma ENTAILS b : B|} \AXC{|Gamma ENTAILS f : A -> C|} \AXC{|Gamma ENTAILS g : B -> C|}
+\rule{$+$CR}\TIC{|Gamma ENTAILS case (right b) f g = g b IN C|} \DP \]
+
+\end{frame}
+
+
+\begin{frame}{More computation rules}
+
+\[ \AXC{|Gamma, x : A ENTAILS t : B x|} \AXC{|Gamma ENTAILS a : A|}
+\rule{$\Pi$C}\BIC{|Gamma ENTAILS (\x BIND t) a = t(subst a x) IN B a|} \DP \]
+
+\[ \AXC{|Gamma ENTAILS a : A|} \AXC{|Gamma ENTAILS b : B a|}
+\rule{$\Sigma$CL}\BIC{|Gamma ENTAILS fst (a , b) = a IN A|} \DP \]
+
+\[ \AXC{|Gamma ENTAILS a : A|} \AXC{|Gamma ENTAILS b : B a|}
+\rule{$\Sigma$CR}\BIC{|Gamma ENTAILS snd (a , b) = b IN B a|} \DP \]
+
+\end{frame}
+
+\begin{frame}{Congruence rules}
+
+We need a congruence rule for each constant we introduce:
+
+\[ \AXC{|Gamma ENTAILS a = a PRIME IN A|} \AXC{|Gamma ENTAILS b = b PRIME IN B|}
+\BIC{|Gamma ENTAILS (a, b) = (a PRIME, b PRIME) IN A TIMES B|} \DP \]
+
+\[ \AXC{|Gamma ENTAILS p = p PRIME IN A TIMES B|}
+\UIC{|Gamma ENTAILS fst p = fst p PRIME IN A|} \DP
+\qquad
+\AXC{|Gamma ENTAILS p = p PRIME IN A TIMES B|}
+\UIC{|Gamma ENTAILS snd p = snd p PRIME IN B|} \DP \]
+
+\[ \AXC{|Gamma, x : A ENTAILS t = t PRIME IN B|}
+\UIC{|Gamma ENTAILS \x BIND t = \x BIND t PRIME IN A -> B|} \DP \]
+
+\[ \AXC{|Gamma ENTAILS f = f SKIP PRIME IN A -> B|} \AXC{|Gamma ENTAILS a = a PRIME IN A|}
+\BIC{|Gamma ENTAILS f a = f SKIP PRIME a PRIME IN B|} \DP \]
+
+\ldots\ and similar rules for |left|, |right|, |case|, and |absurd|.
+
+\end{frame}
+
+\begin{frame}{Equivalence rules}
+
+Judgemental equality is an equivalence relation.
+
+\[ \AXC{|Gamma ENTAILS t : A|}
+\UIC{|Gamma ENTAILS t = t IN A|} \DP \]
+
+\[ \AXC{|Gamma ENTAILS t = u IN A|}
+\UIC{|Gamma ENTAILS u = t IN A|} \DP \]
+
+\[ \AXC{|Gamma ENTAILS t = u IN A|} \AXC{|Gamma ENTAILS u = v IN A|}
+\BIC{|Gamma ENTAILS t = v IN A|} \DP \]
+
+\end{frame}
+
+\begin{frame}{Conversion rule}
+
+Once we establish that two sets are judgementally equal, we can transfer terms between the two sets.
+
+\[ \AXC{|Gamma ENTAILS t : A|}
+\AXC{|Gamma ENTAILS A = B IN U|}
+\rule{conv}\BIC{|Gamma ENTAILS t : B|} \DP \]
+
+\marker{Exercise} Finish deriving
+\[ |Gamma ENTAILS _ : ((Pi p (Sigma' A B)) C (fst p)) -> (Pi x A) B x -> C x| \]
+(where |Gamma DEFEQ A : U, B : A -> U, C : A -> U|).
+
+\end{frame}
+
+\begin{frame}{More congruence rules}
+
+We can state congruence rules for dependent products and sums only after we have the conversion rule. Why?
+
+\[ \AXC{|Gamma ENTAILS a = a PRIME IN A|} \AXC{|Gamma ENTAILS b = b PRIME IN B a|}
+\BIC{|Gamma ENTAILS (a, b) = (a PRIME, b PRIME) IN (Sigma x A) B x|} \DP \]
+
+\[ \AXC{|Gamma ENTAILS p = p PRIME IN (Sigma x A) B x|}
+\UIC{|Gamma ENTAILS fst p = fst p PRIME IN A|} \DP
+\quad
+\AXC{|Gamma ENTAILS p = p PRIME IN (Sigma x A) B x|}
+\UIC{|Gamma ENTAILS snd p = snd p PRIME IN B (fst p)|} \DP \]
+
+\[ \AXC{|Gamma, x : A ENTAILS t = t PRIME IN B x|}
+\UIC{|Gamma ENTAILS \x BIND t = \x BIND t PRIME IN (Pi x A) B x|} \DP \]
+
+\[ \AXC{|Gamma ENTAILS f = f SKIP PRIME IN (Pi x A) B x|} \AXC{|Gamma ENTAILS a = a PRIME IN A|}
+\BIC{|Gamma ENTAILS f a = f SKIP PRIME a PRIME IN B a|} \DP \]
+
+\end{frame}
+
+\begin{frame}{Decidability of judgemental equality}
+
+Our judgemental equality is \emph{decidable}: for any equality judgement we can decide whether it has a derivation or not.
+
+(As a consequence, typechecking is also decidable.)
+
+Decidability is achieved by reducing terms to their \emph{normal forms} and see if the normal forms match.
+
+There are various \emph{reduction strategies}, and judgemental equality is formulated without reference to any particular reduction strategy --- it captures the notion of computation only abstractly.
+
+\end{frame}
+
+\begin{frame}{Canonical vs non-canonical elements}
+
+Introduction rules specify \emph{canonical} --- or \emph{immediately recognisable} --- elements of a set.
+
+A complex construction may not be immediately recognisable as belonging to a set, but as long as we can see that it \emph{computes} to a canonical element, we accept it as a \emph{non-canonical} element of the set.
+
+\marker{Remark} It follows that all computations in type theory must terminate, because from a non-canonical proof we should be able to get a canonical one in finite time.
+
+\varmarker{Property}{canonicity} If |ENTAILS t : A|, then |ENTAILS t = c IN A| for some canonical element~|c|.
+
+\end{frame}
+
+\begin{frame}{Non-derivable proposition}
+
+Let |Gamma DEFEQ A : U, B : A -> U|.
+We can derive
+\[ |Gamma ENTAILS _ : ((Sigma x A) B x) -> (NEG (Pi x A) NEG B x)| \]
+but not
+\[ |Gamma ENTAILS _ : (NEG (Pi x A) NEG B x) -> ((Sigma x A) B x)| \]
+
+\marker{Exercise}
+Assuming that there is an additional rule
+\abovedisplay
+\[ \AXC{|Gamma ENTAILS X : U|}
+\rule{LEM}\UIC{|Gamma ENTAILS LEM X : X + NEG X|} \DP \]
+derive
+\[ |Gamma ENTAILS _ : (NEG (Pi x A) NEG B x) -> ((Sigma x A) B x)| \]
+\end{frame}
+
+\begin{frame}{Classical logic as an extension of intuitionistic logic}
+
+By including the LEM rule, our logic system can now derive intuitionistically unprovable but classically provable propositions.
+
+The LEM rule breaks canonicity, however (why?) --- the system is no longer computationally meaningful.
+
+We are actually abusing the intuitionistic system, though: classical disjunction and existence are semantically weaker than their intuitionistic counterparts, so naively using the latter to state classical facts does not really make much sense.
+
+\end{frame}
+
+\begin{frame}{Classical logic as a sub-system of intuitionistic logic}
+The \emph{Gödel--Gentzen negative translation} embeds classical logic into intuitionistic logic by
+\begin{itemize}
+\item putting double negation in front of ``atomic propositions'',
+\item representing existential quantification by `|NEG (Pi x A) NEG {-"\kern3pt\text\ldots"-}|', and
+\item representing disjunction by `|NEG (NEG {-"\text\ldots\kern1pt"-} TIMES NEG {-"\kern3pt\text\ldots"-})|'.
+\end{itemize}
+
+A proposition is classically provable if and only if its Gödel--Gentzen negative translation is intuitionistically provable.
+
+\marker{Exercise} Let |Gamma DEFEQ A : U, a : A, D : A -> U|. (Note that |A|~is an inhabited set.) Derive
+\[ |Gamma ENTAILS _ : NEG (Pi x A) NEG (NEG NEG D x -> (Pi y A) NEG NEG D y)| \]
+where the proposition is the Gödel--Gentzen negative translation of
+\[ \exists\kern1pt[\kern1pt x : A \kern1.25pt]\kern1.5pt\; D\;x \relation{\to} \forall\kern1pt[\kern1pt y : A \kern1.25pt]\kern1.5pt\; D\;y \]
+
+\end{frame}
+
+\end{document}

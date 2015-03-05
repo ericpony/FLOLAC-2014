@@ -1,0 +1,446 @@
+%!TEX encoding = UTF-8 Unicode
+
+\documentclass[t,compress,hyperref={hidelinks}]{beamer}
+
+%include preamble.fmt
+
+\newcommand{\lectureno}{I}
+
+\begin{document}
+
+%include document.fmt
+
+\title{Type theory and logic}
+\subtitle{Lecture~\lectureno: simple type theory}
+\date{1 July 2014}
+\author{{\fontspec[ExternalLocation=/Library/Fonts/]{DFHeiStd-W5}\href{http://www.cs.ox.ac.uk/people/hsiang-shang.ko/}{柯向上}}}
+\institute{\href{http://www.cs.ox.ac.uk/}{Department of Computer Science}\\ \href{http://www.ox.ac.uk/}{University of Oxford}\\ \href{mailto:Hsiang-Shang.Ko@@cs.ox.ac.uk}{Hsiang-Shang.Ko\char64 cs.ox.ac.uk}}
+
+{\usebackgroundtemplate{\includegraphics[width=\paperwidth]{banner.pdf}}
+\begin{frame}
+\titlepage
+\end{frame}}
+
+\begin{frame}[fragile]{Explaining typing}
+Consider the Haskell program:
+\begin{code}
+swap{-"~"-}  ::  {-"~"-}(a, b) -> (b, a)
+swap{-"~"-}  =   {-"~"-}\p -> (snd' p, fst' p)
+\end{code}
+How do we explain that the program is type-correct?
+
+The function |swap| is from |(a, b)| to |(b, a)|.
+Assume that we have an input~|p| of type |(a, b)|; we need to construct a term of type |(b, a)|.
+To do so, we need to construct a term of type |b| and another term of type |a|, and pair them together.
+We can use |snd' p| as the first term, since |p| has type |(a, b)| and the type of |snd' p| is the type of the second component.
+Symmetrically, |fst' p| can be used as the second term.
+\end{frame}
+
+\begin{frame}{Typing derivation}
+
+The reasoning can be formalised as the following \emph{typing derivation}:\qquad\null
+\abovedisplay
+\[ \AXC{}
+\rule{var}\UIC{|p :: (a, b) ENTAILS p :: (a, b)|}
+\rule{snd}\UIC{|p :: (a, b) ENTAILS snd' p :: b|}
+\AXC{}
+\rule{var}\UIC{|p :: (a, b) ENTAILS p :: (a, b)|}
+\rule{fst}\UIC{|p :: (a, b) ENTAILS fst' p :: a|}
+\rule{pair}\BIC{|p :: (a, b) ENTAILS (snd' p, fst' p) :: (b, a)|}
+\rule{abs}\UIC{|ENTAILS \p -> (snd' p, fst' p) :: (a, b) -> (b, a)|}
+\DP \]
+
+Why formalise?
+
+\begin{itemize}
+\item Conciseness. (A \emph{domain-specific language} for explaining typing, if you like.)
+\item Mechanisation (e.g., for implementing a typechecker).
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}{Logical derivation}
+
+We can also read it as a logical derivation of the proposition ``|a|~and~|b| ~implies~ |b|~and~|a|'':
+\abovedisplay
+\[
+\AXC{}
+\RightLabel{\footnotesize\rlap{(assum)}\phantom{(var)}}\UIC{|(dehighlight(p ::)) (a, b) ENTAILS (dehighlight(p ::)) (a, b)|}
+\RightLabel{\footnotesize\rlap{($\wedge$ER)}\phantom{(snd)}}\UIC{|(dehighlight(p ::)) (a, b) ENTAILS (dehighlight(snd' p ::)) b|}
+\AXC{}
+\RightLabel{\footnotesize\rlap{(assum)}\phantom{(var)}}\UIC{|(dehighlight(p ::)) (a, b) ENTAILS (dehighlight(p ::)) (a, b)|}
+\RightLabel{\footnotesize\rlap{($\wedge$ER)}\phantom{(fst)}}\UIC{|(dehighlight(p ::)) (a, b) ENTAILS (dehighlight(fst' p ::)) a|}
+\RightLabel{\footnotesize\rlap{($\wedge$I)}\phantom{(pair)}}\BIC{|(dehighlight(p ::)) (a, b) ENTAILS (dehighlight((snd' p, fst' p) ::)) (b, a)|}
+\RightLabel{\footnotesize\rlap{($\to$I)}\phantom{(abs)}}\UIC{|ENTAILS (dehighlight(\p -> (snd' p, fst' p) ::)) (a, b) -> (b, a)|}
+\DP \]
+
+This is Gentzen's \emph{natural deduction} system, in which only the ``type part'' is present.
+
+What about the ``program part''?
+
+\end{frame}
+
+\begin{frame}{Constructive logic}
+
+In \emph{constructive logic}, the meaning of a proposition is a \emph{set of valid proofs} that we admit as proving the proposition, and the proposition is said to be true exactly when we can construct a proof in the set.
+
+For example,
+\begin{itemize}
+\item proofs of ``|A|~and~|B|\,'' should be pairs of proofs, one of |A|~and the other of~|B|;
+\item proofs of ``|A|~implies~|B|\,'' should be procedures which produces a proof of~|B| upon receiving a proof of~|A|.
+\end{itemize}
+
+\ldots\ But these are just programs having pair or function types!
+
+\end{frame}
+
+\begin{frame}{The propositions-as-types principle}
+
+Slogan:
+\begin{center}
+\emph{Propositions are types.}
+
+\emph{Proofs are programs.}
+\end{center}
+
+That is, logical reasoning is simply functional programming.
+
+For example, if we want to show that ``|a|~and~|b| ~implies~ |b|~and~|a|'', it suffices to construct a functional program of type |(a, b) -> (b, a)|.
+
+Not every functional programming language will do, however.
+
+\end{frame}
+
+\begin{frame}{Intuitionistic type theory}
+
+Per Martin-Löf's \emph{intuitionistic type theory} was designed in the '70s to serve as a foundation for \emph{intuitionistic mathematics}.
+It is simultaneously
+\begin{itemize}
+\item a computationally meaningful higher-order logic system and
+\item a very expressively typed functional programming language.
+\end{itemize}
+
+The dependently typed programming language Agda is theoretically based on MLTT.
+
+\end{frame}
+
+\begin{frame}{Sets}
+
+Activities in type theory consist of construction of elements of various \emph{sets} (which we regard as synonymous with ``types'').
+
+Note that element construction includes proving logical propositions (when we regard sets as propositions) and carrying out general mathematical constructions (e.g., constructing functions of type |Nat -> Nat|).
+
+In these lectures we will mainly focus on sets that have a logical interpretation.
+
+Specification of sets is thus the central part of type theory.
+
+\end{frame}
+
+\begin{frame}{Judgements}
+
+\emph{Judgements} are justifiable statements about expressions.
+Today we will exclusive use \emph{typing judgements}.
+
+A typing judgement has the form
+\[ |Gamma ENTAILS t : S| \]
+where the \emph{context}~|Gamma| is a finite list ``|x : A, y : B, {-"\text\ldots"-}|'' of type assignments to distinct variables, which can appear in |t|~and~|S|.
+In~|Gamma|, a variable can also appear in the types to its right (e.g., |x|~can appear in~|B|).
+
+The judgement states that, under the typing assumptions in~|Gamma|, the expression~|t| has type~|S| (i.e., |t|~is a legitimate element of the set~|S|).
+
+In a typing judgement |Gamma|~|ENTAILS|~|t : S|, the context~|Gamma| can be empty, in which case we simply write |ENTAILS|~|t : S|.
+
+\end{frame}
+
+\begin{frame}{Set of sets}
+We assume that there is a set of sets named~|U| (for ``universe''), so when we write down, for example, |Gamma|~|ENTAILS|~|A : U|, this states that |A|~is a set under the assumptions in~|Gamma|.
+
+Whenever we write down a typing judgement, we require that the expressions appearing on the right of all the colons in the judgement are already judged to be sets.
+
+\marker{Remark} This rough treatment is actually paradoxical; we will resolve the paradox tomorrow.
+
+\end{frame}
+
+\begin{frame}{Derivations}
+
+Judgements are justified by \emph{derivations}, which are constructed using a predetermined collection of \emph{deduction rules}.
+
+A deduction rule has the form
+\[ \AXC{|J'(sub 0)|} \AXC{\ldots} \AXC{|J'(sub (n-1))|}
+\rule{\textit{rule name}}\TIC{|J'|} \DP \]
+which says that the judgement~|J'|, called the \emph{conclusion} of the rule, can be established if the judgements |J'(sub 0)|, \ldots, |J'(sub (n-1))|, called the \emph{premises} of the rule, can be established. 
+
+\end{frame}
+
+\begin{frame}{Assumption rule}
+
+A rule can have zero premises, meaning that its conclusion is self-evident.
+
+For example, there is a \emph{variable rule}
+\abovedisplay
+\[ \AXC{}
+\rule{V}\UIC{|Gamma ENTAILS x : S|}
+\DP \]
+\belowdisplay
+which has a \emph{side condition} that |x : S| appears in~|Gamma|.
+
+\end{frame}
+
+\begin{frame}{Set specification}
+
+Today, we give three kinds of rules for specifying each set:
+\begin{itemize}
+\item \emph{Formation rule} --- what constitute the name of the set.
+\item \emph{Introduction rule(s)} --- how to construct (canonical) elements of the set.
+\item \emph{Elimination rule(s)} --- how to deconstruct elements of the set and transform them to elements of some other sets.
+\end{itemize}
+
+(One more kind of rules to come tomorrow.)
+
+\end{frame}
+
+\begin{frame}{Cartesian product types (conjunction)}
+
+\begin{itemize}
+\item Formation:
+\[ \AXC{|Gamma ENTAILS A : U|} \AXC{|Gamma ENTAILS B : U|}
+\rule{$\times$F}\BIC{|Gamma ENTAILS A TIMES B : U|} \DP \]
+
+\item Introduction:
+\[ \AXC{|Gamma ENTAILS a : A|} \AXC{|Gamma ENTAILS b : B|}
+\rule{$\times$I} \BIC{|Gamma ENTAILS (a, b) : A TIMES B|} \DP \]
+
+\item Elimination:
+\[ \AXC{|Gamma ENTAILS p : A TIMES B|}
+\rule{$\times$EL} \UIC{|Gamma ENTAILS fst p : A|} \DP
+\qquad
+\AXC{|Gamma ENTAILS p : A TIMES B|}
+\rule{$\times$ER} \UIC{|Gamma ENTAILS snd p : B|} \DP \]
+
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}{Cartesian product types (conjunction)}
+
+\marker{Exercise} Let |Gamma DEFEQ A : U, B : U, p : A TIMES B|.
+Give a derivation of |Gamma ENTAILS _ : B TIMES A|.
+\abovedisplay
+\[ \AXC{}
+\rule{V}\UIC{|Gamma ENTAILS p : A TIMES B|}
+\rule{$\times$ER}\UIC{|Gamma ENTAILS snd p : B|}
+\AXC{}
+\rule{V}\UIC{|Gamma ENTAILS p : A TIMES B|}
+\rule{$\times$EL}\UIC{|Gamma ENTAILS fst p : A|}
+\rule{$\times$I}\BIC{|Gamma ENTAILS (snd p, fst p) : B TIMES A|}
+\DP \]
+
+\marker{Exercise} Derive
+\[ |A : U, B : U, C : U, p : (A TIMES B) TIMES C ENTAILS _ : A TIMES (B TIMES C)| \]
+
+\end{frame}
+
+\begin{frame}{Function types (implication)}
+
+\begin{itemize}
+\item Formation:
+\[ \AXC{|Gamma ENTAILS A : U|} \AXC{|Gamma ENTAILS B : U|}
+\rule{$\to$F} \BIC{|Gamma ENTAILS A -> B : U|} \DP \]
+
+\item Introduction:
+\[ \AXC{|Gamma, x : A ENTAILS t : B|}
+\rule{$\to$I} \UIC{|Gamma ENTAILS \ x BIND t : A -> B|} \DP \]
+
+\item Elimination:
+\[ \AXC{|Gamma ENTAILS f : A -> B|} \AXC{|Gamma ENTAILS a : A|}
+\rule{$\to$E} \BIC{|Gamma ENTAILS f a : B|} \DP \]
+This formalises the ``modus ponens'' rule in logic.
+
+\end{itemize}
+
+\marker{Exercise} Derive
+\[ |A : U, B : U, C : U ENTAILS _ : (A -> B -> C) -> B -> A -> C| \]
+
+\end{frame}
+
+\begin{frame}{Coproduct types (disjunction)}
+
+\begin{itemize}
+\item Formation:
+\[ \AXC{|Gamma ENTAILS A : U|} \AXC{|Gamma ENTAILS B : U|}
+\rule{$+$F} \BIC{|Gamma ENTAILS A PLUS B : U|} \DP \]
+
+\item Introduction:
+\[ \AXC{|Gamma ENTAILS a : A|}
+\rule{$+$IL} \UIC{|Gamma ENTAILS left a : A PLUS B|} \DP
+\qquad
+\AXC{|Gamma ENTAILS b : B|}
+\rule{$+$IR} \UIC{|Gamma ENTAILS right b : A PLUS B|} \DP \]
+
+\item Elimination:
+\[ \AXC{|Gamma ENTAILS q : A + B|} \AXC{|Gamma ENTAILS f : A -> C|} \AXC{|Gamma ENTAILS g : B -> C|}
+\rule{$+$E} \TIC{|Gamma ENTAILS case q f g : C|} \DP \]
+
+\end{itemize}
+
+\marker{Exercise} Derive
+\[ |A : U, B : U ENTAILS _ : A PLUS B -> B PLUS A| \]
+
+\end{frame}
+
+\begin{frame}{Unit type (truth)}
+
+\begin{itemize}
+\item Formation:
+\[ \AXC{}
+\rule{|TOP|F} \UIC{|Gamma ENTAILS TOP : U|} \DP \]
+
+\item Introduction:
+\[ \AXC{}
+\rule{|TOP|I} \UIC{|Gamma ENTAILS unit : TOP|} \DP \]
+
+\item Elimination: none
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}{Empty type (falsity)}
+
+\begin{itemize}
+\item Formation:
+\[ \AXC{}
+\rule{|BOT|F} \UIC{|Gamma ENTAILS BOT : U|} \DP \]
+
+\item Introduction: none
+
+\item Elimination:
+\[ \AXC{|Gamma ENTAILS b : BOT|}
+\rule{|BOT|E} \UIC{|Gamma ENTAILS absurd b : A|} \DP \]
+This formalises the ``principle of explosion''.
+\end{itemize}
+
+We define the \emph{negation} of a proposition~|A| to be |A -> BOT|, which we abbreviate as |NEG A|.
+Note that |NEG A| has a proof if and only if |A|~has no proof.
+
+\marker{Exercise} Show that |A -> NEG NEG A| is true.
+
+\end{frame}
+
+\begin{frame}{Simple type theory}
+
+We have specified the set formers `$\to$', `$\times$', `$+$', |TOP|, and~|BOT|, which are respectively interpreted logically as implication, conjunction, disjunction, truth, and falsity.
+
+The fragment of type theory consisting of these sets is called \emph{simple type theory}; the type part (with, e.g., the natural deduction system) is traditionally called \emph{propositional logic}.
+
+\end{frame}
+
+\begin{frame}{Propositional connectives}
+
+We study simple type theory (in isolation) because we are interested in understanding the role of propositional set formers (connectives) when they are used to combine propositions into more complex ones.
+
+For an extreme example, the truth of the following proposition is determined by the way we use the connectives alone.
+\[ \text{\textbf{\color{red}if} \textit{herba viridi} \textbf{\color{red}and} \textit{area est infectum}, \textbf{\color{red}then} \textit{area est infectum}} \]
+The actual meanings/structures of the two propositions ``\textit{herba viridi}'' and ``\textit{area est infectum}'' do not matter.
+
+\end{frame}
+
+\begin{frame}{Consistency}
+
+As a logic system, simple type theory is \emph{consistent}, meaning that not all propositions are provable.
+
+Consistency is a basic requirement of any (traditional) mathematical logic: if a logic is \emph{inconsistent}, meaning that every proposition is provable, then we might as well throw the logic away and simply declare everything to be true.
+
+The type system of Haskell is inconsistent, and hence inadequate as a (traditional) mathematical logic system.
+
+\end{frame}
+
+\begin{frame}{Non-provable propositions}
+
+Assuming |A : U| and |B : U|:
+\begin{center}
+\begin{tabular}{ll}
+We can prove & but not \\ \hline \\[-2ex]
+|NEG NEG (A + NEG A)| & |A + NEG A| \\
+& (\emph{law of excluded middle}) \\
+|A -> NEG NEG A| & |NEG NEG A -> A| \\
+& (\emph{principle of indirect proof}\,) \\
+|NEG A + NEG B -> NEG (A TIMES B)| & |NEG (A TIMES B) -> NEG A + NEG B| \\
+|(A -> B) -> (NEG B -> NEG A)| & |(NEG B -> NEG A) -> (A -> B)|
+\end{tabular}
+\end{center}
+
+\end{frame}
+
+\begin{frame}{Intuitionism}
+
+What's ``wrong'' with the type-theoretic logic?
+\begin{itemize}
+\item Nothing's wrong; the logic just reflects a different way of viewing mathematics.
+\end{itemize}
+
+\emph{Intuitionism} was founded by L.E.J.~Brouwer~(1881--1966), which holds the position that mathematical objects are \emph{mental constructions}, rather than existing in an ideal world, independent from human mind.
+The latter is the position of \emph{classical mathematics}.
+
+\end{frame}
+
+\begin{frame}{Computability}
+
+Alan~M. Turing. On computable numbers, with an application to the Entscheidungsproblem. 1937.
+
+\begin{quote}
+\normalfont
+\begin{itemize}
+\item\relax [\ldots] the justification [of the definitions] lies in the fact that the human memory is necessarily limited.
+\vspace*{1ex}
+\item We may compare a man in the process of computing a real number to a machine [\ldots]
+\vspace*{1ex}
+\item\relax [On number of symbols\ldots] We cannot tell at a glance whether 9999999999999999 and 999999999999999 are the same.
+\vspace*{1ex}
+\item\relax [On number of states\ldots] If we admitted an infinity of states of mind, some of them will be ``arbitrarily close'' and will be confused.
+\end{itemize}
+\end{quote}
+
+\end{frame}
+
+\begin{frame}{Unification of mathematics and programming}
+
+Per Martin-Löf. Constructive mathematics and computer programming. 1984.
+
+\begin{quote}
+\normalfont
+If programming is understood
+\vspace*{1ex}
+\begin{itemize}
+\item not as the writing of instructions for this or that computing machine
+\vspace*{1ex}
+\item but as the design of methods of computation that it is the computer's duty to execute
+\vspace*{1ex}
+\begin{itemize}
+\item (a difference that Dijkstra has referred to as the difference between comput\textbf{er} science and comput\textbf{ing} science),
+\end{itemize}
+\end{itemize}
+\vspace*{1ex}
+then it no longer seems possible to distinguish the discipline of programming from constructive mathematics.
+\end{quote}
+
+\end{frame}
+
+\begin{frame}{Some more exercises}
+
+Assuming |A : U|, |B : U|, and |C : U|, prove
+
+\begin{itemize}
+
+\item |(A -> B -> C) -> (A -> B) -> A -> C|
+
+\item |(A + B) + C -> A + (B + C)|
+
+\item |NEG (A PLUS B) <-> NEG A TIMES NEG B|
+
+\item |A PLUS (B TIMES C) <-> (A PLUS B) TIMES (A PLUS C)|
+
+\end{itemize}
+
+\end{frame}
+
+\end{document}
