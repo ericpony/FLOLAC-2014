@@ -1,0 +1,736 @@
+\chapter{Categorical equivalence of ornaments and relational algebras}
+\label{chap:equivalence}
+
+Consider the |AlgList| datatype in \autoref{sec:algOD} again.
+The way it is refined relative to |List| looks canonical, in the sense that any ornamentation of |List| can be programmed as a special case of |AlgList|:
+by setting the carrier of the algebra~|R|, we can choose whatever index set we want, and by carefully programming~|R|, we can insert fields into the list datatype that add more information or put restriction on fields and indices.
+For example, if we want some new information in the nil case, we can program~|R| such that |R (`nil , tt) x| contains a field requesting that information; if, in the cons case, we need to relate the targeted index~|x|, the head element~|a|, and the index~|x'| of the recursive position in some way, we can program~|R| such that |R (`cons , a , x' , tt) x| expresses that relationship.
+
+The above observation leads to the following general theorem:
+Let |O : Orn e D E| be an ornament from |D : Desc I| to |E : Desc J|.
+Then there is a \key{classifying algebra} for~|O|
+\begin{code}
+clsAlg O : Ḟ D (Inv' e) ↝ Inv' e
+\end{code}
+whose carrier type is defined by
+\begin{code}
+^^^Inv' e : I → Set
+Inv' e i = (Σ'(j ∶ J)) e j ≡ i
+\end{code}
+such that there are isomorphisms
+\begin{code}
+(j : J) → μ ⌊ algOD D (clsAlg O) ⌋ (e j , j , refl) ≅ μ E j
+\end{code}
+That is, the algebraic ornamentation of~|D| using the classifying algebra derived from~|O| produces a datatype isomorphic to~|μ E|, so intuitively the algebraic ornamentation has the same content as~|O|.
+We may interpret this theorem as saying that algebraic ornamentation is ``complete'' for the ornament language: any relationship between datatypes that can be described by an ornament can be described up to isomorphism by an algebraic ornamentation.
+The name ``classifying algebra'' is explained after the examples below.
+
+\block{Examples}{classifying algebras for two ornaments}{
+The following relational algebra~|R| serves as a classifying algebra for the ornament |⌈ OrdListOD ⌉| from lists to ordered lists:
+\begin{code}
+R : Ḟ (ListD Val) (Inv' !) ↝ Inv' !  -- where |! : Val → ⊤|
+R (`nil   ,                    tt) (b , refl) = ⊤
+R (`cons  , x , (b' , refl) ,  tt) (b , refl) = (b ≤ x) × (b' ≡ x)
+\end{code}
+The nil case says that the empty list can be mapped to any |b : Val| (since any~|b| is a lower bound of the empty list); for the cons case, where |x : Val| is the head element of a nonempty list and |b' : Val| is a possible result of folding the tail (i.e., |b'|~is a lower bound of the tail), the list can be mapped to |b : Val| if |b|~is a lower bound of~|x| and |x|~is exactly~|b'|.
+The type of proofs that a list~|xs| folds with~|R| to some~|b| is isomorphic to |Ordered b xs|, and hence
+\begin{code}
+AlgList Val R (b , refl)  ≅ (Σ'(xs ∶ List Val)) (cata(R)) xs (b , refl)  {-""-}
+                          ≅ (Σ'(xs ∶ List Val)) Ordered b xs             ≅ OrdList b
+\end{code}
+
+For another example, consider the ornament |NatD-ListD A|, for which we can use the following algebra~|S| as a classifying algebra:
+\begin{code}
+S : Ḟ NatD (Inv' !) ↝ Inv' !  -- where |! : ⊤ → ⊤|
+S (`nil   ,                tt) (tt , refl) = ⊤
+S (`cons  , (tt , refl) ,  tt) (tt , refl) = A
+\end{code}
+The result of folding a natural number~|n| with~|S| is uninteresting, as it can only be~`|tt|'.
+The fold, however, requires an element of type~|A| for each successor node it encounters, so a proof that |n|~goes through the fold consists of |n|~elements of type~|A| and amounts to an inhabitant of |Vec A n|.
+Thus
+\begin{code}
+μ ⌊ algOD NatD S ⌋ (tt , tt , refl)  ≅ (Σ'(n ∶ Nat)) (cata(S)) n (tt , refl)  {-""-}
+                                     ≅ (Σ'(n ∶ Nat)) Vec A n                  ≅ List A
+\end{code}
+This example helps to emphasise \emph{proof-relevance} of our relational language, deviating from \citet{Bird-AoP}, which (implicitly) adopts the traditional proof-irrelevant semantics of relations (in the sense that all one cares about proofs of set membership is their existence).}
+
+The completeness theorem brings up a nice algebraic intuition about inductive families.
+Consider the ornament from lists to vectors, for example.
+This ornament specifies that the type |List A| is refined by the collection of types |Vec A n| for all |n : Nat|.
+A list, say |a ∷ b ∷ [] : List A|, can be reconstructed as a vector by starting in the type |Vec A zero| as~|[]|, jumping to the next type |Vec A (suc zero)| as |b ∷ []|, and finally landing in |Vec A (suc (suc zero))| as |a ∷ b ∷ []|.
+The list is thus \emph{classified} as having length~$2$, as computed by the fold function |length|, and the resulting vector is a fused representation of the list and the classification proof.
+In the case of vectors, this classification is total and deterministic: every list is classified under one and only one index.
+But in general, classifications can be partial and nondeterministic.
+For example, promoting a list to an ordered list is classifying the list under an index that is a lower bound of the list.
+The classification process checks at each jump whether the list is still ordered; this check can fail, so an unordered list would ``disappear'' midway through the classification.
+Also there can be more than one lower bound for an ordered list, so the list can end up being classified under any one of them.
+Compared with \varcitet{McBride-ornaments}{'s original functional algebraic ornamentation}, which can only capture part of this intuition about classification (namely those classifications that are total and deterministic), relational algebraic ornamentation allows partiality and nondeterminacy and thus captures the idea about classification in its entirety --- a classification is just a relational fold computing the index that classifies an inhabitant.
+All ornaments specify classifications, and thus can be transformed into algebraic ornamentations.
+
+There is a dual to the completeness theorem: every relational algebra is isomorphic to the classifying algebra for the algebraic ornament using the algebra.
+More precisely: Let |D : Desc I| be a description and |R : Ḟ D X ↝ X| an algebra (where |X : I → Set|).
+There is a family of isomorphisms between |X i|~and |Inv' proj₁ i| for every |i : I| (where |proj₁ : Σ I X → I|); call the forward direction of this family of isomorphisms |h : X ⇉ Inv' proj₁|.
+Then we have
+\begin{code}
+fun h • R ≃ clsAlg ⌈ algOD D R ⌉ • Ṙ D (fun h)
+\end{code}
+or diagrammatically:
+\[ \begin{tikzpicture}[x=12em,y=3em, text height=1.5ex, text depth=.25ex]
+\node(X)                  {|X|};
+\node(FDX) [below=1 of X] {|Ḟ D X|};
+\node(I)   [right=1 of X] {|Inv' proj₁|};
+\node(FDI) [below=1 of I] {|Ḟ D (Inv' proj₁)|};
+\draw[-> ] (FDX) edge node[left]{|R|} (X);
+\draw[-> ] (FDI) edge node[right]{\rlap{|clsAlg ⌈ algOD D R ⌉|}} (I);
+\draw[<->] (FDX) edge node(RDh)[below,xshift=15pt]{|Ṙ D (fun h)|} node(iso)[horizontal label on arrow,xshift=-35pt,yshift=-.25pt]{|≅*|} (FDI)
+           (X)   edge (I);
+\node at (X -|| iso) [horizontal label on arrow,yshift=-.25pt]{|≅*|};
+\node at (X -|| RDh) [above]{|fun h|};
+\end{tikzpicture} \]
+Together with the completeness theorem, we see that |algOD| and |clsAlg| are, in some sense, inverse to each other up to isomorphism.
+This suggests that we can seek to construct a \key{categorical equivalence} between |SliceCategory Ōrn (I , D)| and a suitable category of |D|-algebras and homomorphisms by extending |algOD| and |clsAlg| to functors between the two categories and proving that the two functors are inverse up to (natural) isomorphism.
+This we do in \autoref{sec:ornaments-and-relational-algebras}, after we look at ornaments from a more semantic perspective in \autoref{sec:ornaments-and-horizontal-transformations}, where we also deal with some unresolved issues in \autoref{chap:categorical}.
+The categorical equivalence shows that ornaments and relational algebras are essentially the same entities, which lets us associate some ornamental and relational algebraic constructions in \autoref{sec:equivalence-consequences}.
+The results in this chapter are only partially formalised, largely due to the difficulty of manipulating complicatedly typed terms.
+This issue, along with some others, is discussed in \autoref{sec:equivalence-discussion}.
+
+
+\section{Ornaments and horizontal transformations}
+\label{sec:ornaments-and-horizontal-transformations}
+
+We first aim to find a semantic perspective on ornaments, so we can step away from the syntactic detail and handle ornaments more easily, in preparation for \autoref{sec:ornaments-and-relational-algebras}.
+Consider the equivalence on ornaments that was left undefined in \autoref{sec:concrete-categories}:
+\begin{code}
+OrnEq :  {I J : Set} {e f : J → I} {D : Desc I} {E : Desc J} →
+         Orn e D E → Orn f D E → Set
+\end{code}
+Here we aim for an extensional equality --- for example, if two ornaments between the same pair of descriptions differ only in either
+\begin{itemize}
+\item that one uses~|σ S| and the other uses |(Δ''(s ∶ S)) (∇''(s))|, both expressing copying, or
+\item that one uses
+\begin{code}
+(Δ''(s ∶ S)) (Δ''(t ∶ T)) (∇''(f s)) (∇''(g t))
+\end{code}
+and the other uses
+\begin{code}
+(Δ''(s ∶ S)) (∇''(f s)) (Δ''(t ∶ T)) (∇''(g t))
+\end{code}
+the latter swapping the order of the middle two independent markings,
+\end{itemize}
+then they describe precisely the same relationship between the pair of descriptions and are considered equal extensionally.
+Since the direct semantics of ornaments is decoded componentwise by |erase|, we might define |OrnEq| as pointwise equality of |erase|, which requires a rather tricky type to express.
+However, it turns out that we can focus on only one aspect of |erase|: fixing two response descriptions related by at least one response ornament, the two response descriptions necessarily have the same pattern of recursive positions and |erase| always copies the values at the positions, so the only behaviour of |erase| that can vary with response ornaments is how the values of the \emph{fields} are transformed.
+This suggests that, in an inhabitant of |⟦ D ⟧ X| where |D : RDesc I| and |X : I → Set|, we can separate the values of the fields from the values at the recursive positions, and focus on how |erase| acts on the first part.
+
+Here \key{indexed containers}~\citep[Chapter~8]{Morris-thesis} can provide a helpful perspective:
+An |I|-indexed container is
+\begin{itemize}
+\item a set~|S| of \key{shapes},
+\item a shape-indexed family of sets |P : S → Set| of \key{positions}, and
+\item a function |next : (s : S) → P s → I| associating each position with an index of type~|I|.
+\end{itemize}
+(The terminology slightly deviates from that of \citeauthor{Morris-thesis}, whose indexed containers refer to indexed families of the above indexed containers, directly comparable with the two-level structure of descriptions.)
+The container is interpreted as the type
+\begin{code}
+(lambda(X)) (Σ'(s ∶ S)) ((p : P s) → X (next s p)) : (I → Set) → Set
+\end{code}
+That is, given a type family |X : I → Set|, an inhabitant of the container type starts with a specific shape --- from which we derive a set of positions and associated indices --- and contains an element of type~|X i| for each of the positions where |i|~is the index associated with the position.
+(For example, take~|S| to be the set of natural numbers, and let the set of positions derived from a natural number~|n| be a finite set of size~|n|, enumerable in a fixed order.
+The container type is then isomorphic to the type of lists, whose elements are indexed in accordance with the |next| function.)
+Response descriptions can be regarded as a special case of indexed containers: values of fields constitute a shape, and sets of positions are restricted to \emph{enumerable} finite sets; consequently, |next s : P s → I| for any |s : S| can be represented by a |List I|, and there is no longer need to specify~|P|.
+We thus define the set of shapes derived from a response description by
+\begin{code}
+^^^Ṡ ^^^S : {I : Set} → RDesc I → Set
+Ṡ (ṿ is)   = ⊤
+Ṡ (σ S D)  = (Σ'(s ∶ S)) Ṡ (D s)
+\end{code}
+and the function |next| by
+\begin{code}
+^^^next : {I : Set} (D : RDesc I) → Ṡ D → List I
+next (ṿ is)   tt        = is
+next (σ S D)  (s , ss)  = next (D s) ss
+\end{code}
+We can then express that a piece of horizontal data of type |⟦ D ⟧ X| can be separated into a shape and a series of contained elements via the following isomorphism:
+\begin{code}
+^^^horizontal-iso :  {I : Set} (D : RDesc I) (X : I → Set) →
+                     ⟦ D ⟧ X ≅ Σ (Ṡ D) (flip Ṗ X ∘ next D)
+\end{code}
+The implementation is just rearrangement of data --- for example, the left-to-right direction is defined by
+\begin{code}
+^^^hori-decomp :  {I : Set} (D : RDesc I) (X : I → Set) →
+                  ⟦ D ⟧ X → Σ (Ṡ D) (flip Ṗ X ∘ next D)
+hori-decomp (ṿ is)   X xs        = tt , xs
+hori-decomp (σ S D)  X (s , xs)  = (pair s * id) (hori-decomp (D s) X xs)
+\end{code}
+
+Back to the semantic equivalence of ornaments.
+Define a specialised version of |erase| on shapes:
+\begin{code}
+^^^erase-Ṡ :  {I J : Set} {e : J → I} {D : RDesc I} {E : RDesc J}
+              (O : ROrn e D E) → Ṡ E → Ṡ D
+erase-Ṡ (ṿ eqs)  tt        = tt
+erase-Ṡ (σ S O)  (s , ss)  = s ,  erase-Ṡ (O s)  ss
+erase-Ṡ (Δ T O)  (t , ss)  =      erase-Ṡ (O t)  ss
+erase-Ṡ (∇ s O)  ss        = s ,  erase-Ṡ O      ss
+\end{code}
+This is the aspect of |erase| that we are interested in, and we can now define equivalence of ornaments as
+\begin{code}
+^^^OrnEq :  {I J : Set} {e f : J → I} {D : Desc I} {E : Desc J} →
+            Orn e D E → Orn f D E → Set
+OrnEq {I} {J} {e} {f} O P =
+  (e ≐ f) × ((j : J) → erase-Ṡ (O (ok j)) ≊' erase-Ṡ (P (ok j)))
+\end{code}
+which can be proved to imply pointwise equality of |forget O| and |forget P|:
+With the help of |horizontal-iso|, the general |erase| can be seen as first separating a piece of horizontal data into a shape and a series of recursive values, processing the shape by |erase-Ṡ|, and combining the resulting shape with the recursive values.
+Since the real work is done by |erase-Ṡ|, requiring extensional equality of |erase-Ṡ| is sufficient.
+This argument is then extended vertically by induction.
+
+We have seen that response ornaments induce shape transformations (by |erase-Ṡ|).
+Conversely, can we derive response ornaments from shape transformations?
+More specifically: Let |D : RDesc I|, |E : RDesc J|, and |t : Ṡ E → Ṡ D|, and we wish to construct a response ornament from~|D| to~|E|.
+The shape transformation~|t| expects a complete |Ṡ E| as its argument, which, in the response ornament, can be assembled by first marking all fields of~|E| as additional by~|Δ|.
+We then apply~|t| to the assembled shape |ss : Ṡ E|, resulting in a shape |t ss : Ṡ D|, and fill out all fields of~|D| using values in this shape by~|∇|.
+Finally, we have to use~|ṿ| to end the response ornament, which requires an index coherence proof of type |Ė e (next E ss) (next D (t ss))| for some |e : J → I| --- this is the extra condition that we need to impose on the shape transformation for deriving a response ornament.
+We thus define \key{horizontal transformations} as
+\begin{code}
+record ^^^HTrans {I J : Set} (e : J → I) (D : RDesc I) (E : RDesc J) : Set
+  where
+    constructor ^^^pair ^^^_,_
+    field
+      t  : Ṡ E → Ṡ D
+      c  : (ss : Ṡ E) → Ė e (next E ss) (next D (t ss))
+\end{code}
+The response ornaments derived by the above process are called \key{normal response ornaments}, which are defined by
+\begin{code}
+^^^normROrn-∇ :  {I J : Set} {e : J → I} {D : RDesc I} {js : List J} →
+                 (ss ∶ Ṡ D) → Ė e js (next D ss) → ROrn e D (ṿ js)
+normROrn-∇ {D := ṿ is   } tt        eqs = ṿ eqs
+normROrn-∇ {D := σ S D  } (s , ss)  eqs = (∇'(s)) normROrn-∇ {D := D s} ss eqs
+
+^^^normROrn :  {I J : Set} {e : J → I} {D : RDesc I} {E : RDesc J} →
+               HTrans e D E → ROrn e D E
+normROrn {E := ṿ js   } tr = normROrn-∇ (HTrans.t tr tt) (HTrans.c tr tt)
+normROrn {E := σ S E  } tr =
+  (Δ'(s ∶ S)) normROrn {E := E s} (curry (HTrans.t tr) s , curry (HTrans.c tr) s)
+\end{code}
+The top-level function |normROrn| exhausts all fields of~|E| by~|Δ|, partially applying the transformation along the way, and then |normROrn-∇| takes over and inserts values obtained from the result of the transformation into fields of~|D| by~|∇|, ending with the placement of the index coherence proof.
+
+We can now easily arrange a category |^^^ḞHTrans ^^^FHTransCat| of descriptions and horizontal transformations, which is isomorphic to |Ōrn|.
+Its objects are of type |Σ Set Desc| as in |Ōrn|, and its sets of morphisms are
+\begin{code}
+λ case (J , E) (I , D) mapsto (Σ'(e : J → I)) FHTrans e D E endcase
+\end{code}
+where |FHTrans| is the type of \key{families of horizontal transformations}:
+\begin{code}
+^^^FHTrans : {I J : Set} → (J → I) → Desc I → Desc J → Set
+FHTrans {I} {J} e D E = (j : J) → HTrans e (D (e j)) (E j)
+\end{code}
+Morphism equivalence is defined to be pointwise equality of the shape transformations extracted by |HTrans.t|, and identities and composition are defined in terms of functional identities and composition.
+We then have two functors |^^^Erase : Functor Ōrn ḞHTrans| and |^^^Normal : Functor ḞHTrans Ōrn| back and forth between the two categories: the object parts of both functors are identities, and for the morphism parts, |Erase| maps ornaments to componentwise |erase-Ṡ| (with suitable coherence proofs) and |Normal| maps families of horizontal transformations to normal ornaments (i.e., componentwise normal response ornaments).
+For any |tr : HTrans e D E|, we can prove that
+\begin{code}
+erase-Ṡ (normROrn tr) ≐ HTrans.t tr
+\end{code}
+which guarantees that the morphism parts of |Erase| and |Normal| are inverse to each other.
+
+Knowing that |Ōrn| and |ḞHTrans| are isomorphic means that, extensionally, we can regard ornaments and horizontal transformations as the same entities and freely switch between the two notions.
+For example, in \autoref{sec:parallel-composition-pullback}, where we did not have the notion of horizontal transformations yet, it was hard to establish the pullback property of parallel composition in |Ōrn|~(\ref{eq:pc-square}) by reasoning in terms of ornaments.
+Switching to |ḞHTrans|, however, the proof becomes conceptually much simpler:
+Due to the isomorphism between |Ōrn| and |ḞHTrans|, it suffices to prove that the image of the square~(\ref{eq:pc-square}) under |Erase| in |ḞHTrans| is a pullback.
+We have the following functor |Shape| from |ḞHTrans| to |Fam|, which maps descriptions to indexed sets of shapes and discards index coherence proofs in horizontal transformations:
+\begin{code}
+^^^Shape : Functor ḞHTrans Fam
+Shape = record
+  case  object    = λ case (I , D   ) mapsto I  , (lambda(i)) Ṡ (D i)            endcase
+  sep   morphism  = λ case (e , ts  ) mapsto e  , (lambda({j})) HTrans.t (ts j)  endcase
+  sep   proofs-of-laws endcase
+\end{code}
+The functor can be proved to be \key{pullback-reflecting}: if the image of a square in |ḞHTrans| under |Shape| is a pullback in |Fam|, then the square itself is a pullback in |ḞHTrans|.
+(The proof proceeds by manipulating shape transformations in |Fam| and then constructing the missing index coherence proof.)
+The problem is thus reduced to proving that the square~(\ref{eq:pc-square}) mapped into |Fam| by |Shape ⋄ Erase| is a pullback, which boils down to the isomorphism
+\begin{code}
+^^^pcROD-iso O P :  Ṡ (toRDesc (pcROD O P))
+                      ≅ (Σ'(p ∶ Ṡ E × Ṡ F)) erase-Ṡ O (proj₁ p) ≡ erase-Ṡ P (proj₂ p)
+\end{code}
+with the two equations
+\begin{code}
+erase-Ṡ (diffROrn-l  O P) ≐ proj₁  ∘ proj₁ ∘ Iso.to (pcROD-iso O P)
+erase-Ṡ (diffROrn-r  O P) ≐ proj₂  ∘ proj₁ ∘ Iso.to (pcROD-iso O P)
+\end{code}
+for any |O : ROrn e D E| and |P : ROrn f D F|, provable by induction on |O|~and~|P|.
+The isomorphism and equations allow us to prove that the derived square in |Fam| is isomorphic to the componentwise set-theoretic pullback, and thus the square itself is also a pullback.
+
+\section{Ornaments and relational algebras}
+\label{sec:ornaments-and-relational-algebras}
+
+We now seek to characterise ornaments and relational algebras as essentially the same entities via a \key{categorical equivalence}, which subsumes the completeness theorem (and its dual) at the beginning of this chapter.
+The definition of categorical equivalence is unfolded below:
+\begin{itemize}
+\item An equivalence between two categories consists of two functors back and forth such that their compositions are \key{naturally isomorphic} to the identity functors.
+\begin{itemize}
+\item A natural isomorphism between two functors |F| , |G : Functor C D| is an isomorphism in the \key{functor category} from~|C| to~|D|, whose objects are functors from~|C| to~|D| and morphisms are \key{natural transformations}.
+\begin{itemize}
+\item[\raisebox{1.5pt}{\scalebox{.5}{$\blacksquare$}}] A natural transformation from~|F| to~|G| is a way of relating the image of~|C| under~|F| to the image of~|C| under~|G|:
+it consists of a morphism |φ X : object F X =D=> object G X| for each object~|X| in~|C|, which we call the \emph{components} of the natural transformation, and for any morphism |m : X =C=> Y| the following \key{naturality} diagram commutes:
+\[ \begin{tikzpicture}[x=50pt,y=30pt,baseline=(phi-Y.base)]
+\node(FX) {|object F X|};
+\node(GX) [right=1 of FX] {|object G X|};
+\node(FY) [below=1 of FX] {|object F Y|};
+\node(GY) [below=1 of GX] {|object G Y|};
+\draw[->] (FX) edge node[above]{|φ X|} (GX)
+          (FY) edge node(phi-Y)[below]{|φ Y|} (GY)
+          (FX) edge node[left ]{|morphism F m|} (FY)
+          (GX) edge node[right]{|morphism G m|} (GY);
+\end{tikzpicture} \]
+Both equivalence and composition for natural transformations are componentwise.
+\end{itemize}
+\item Natural isomorphism is an equivalence relation on functors, so we can assemble a category whose objects are (smaller) categories and morphisms are functors, with natural isomorphism as the equivalence on morphisms.
+A categorical equivalence is then an isomorphism in this category of categories and functors.
+\end{itemize}
+\end{itemize}
+Fixing |D : Desc I|, the completeness theorem is a consequence of one direction of the \emph{object part} of an equivalence between |SliceCategory Ōrn (I , D)| --- which we denote by |Ōrn ^^^/ ^^^_/_ ^^^_/_ (I , D)| from now on --- and the category |^^^RAlg D| whose objects are relational |D|-algebras
+\begin{code}
+record ^^^RAlgebra D : Set₁ where
+  constructor pair
+  field
+    Carrier  : I → Set
+    Alg      : Ḟ D Carrier ↝ Carrier
+\end{code}
+and morphisms are algebra homomorphisms (on which we will elaborate later):
+The two functors forming the equivalence are
+\savecolumns
+\begin{code}
+^^^ClsAlg  : Functor (Ōrn / (I , D)) (RAlg D)
+\end{code}
+and
+\restorecolumns
+\begin{code}
+^^^AlgOrn  : Functor (RAlg D) (Ōrn / (I , D))
+\end{code}
+and their object parts are respectively
+\[ \begin{tikzpicture}[x=2em, y=2em, baseline=(O.base), text height=1.5ex, text depth=.25ex]
+\node(T) {|J , E|};
+\node(B) [below=1 of T] {|I , D|};
+\node(X) [right=1 of T] {|Inv' e|};
+\node(FDX) at (B -|| X) {|Ḟ D (Inv' e)|};
+\draw[->] (T) edge node(O)[left]{|e , O|} (B)
+          (FDX) edge node[right]{|clsAlg O|} (X);
+\node(M) at ($ (T) !.5! (X) $) [coordinate] {};
+\node at (O -|| M) {|mapsto|};
+\end{tikzpicture}
+\qquad\text{and}\qquad
+\begin{tikzpicture}[x=.8em, y=2em, baseline=(O.base), text height=1.5ex, text depth=.25ex]
+\node(T) {|Σ I X , ⌊ algOD D R ⌋|};
+\node(B) [below=1 of T] {|I , D|};
+\node(X) [left=1 of T] {|X|};
+\node(FDX) at (B -|| X) {|Ḟ D X|};
+\draw[->] (T) edge node(O)[right]{|proj₁ , ⌈ algOD D R ⌉|} (B)
+          (FDX) edge node[left]{|R|} (X);
+\node(M) at ($ (T) !.5! (X) $) [coordinate] {};
+\node at (O -|| M) {|mapsto|};
+\end{tikzpicture} \]
+The natural isomorphism between |AlgOrn ⋄ ClsAlg| and the identity functor on |Ōrn / (I , D)| consists of two natural transformations componentwise inverse to each other; their components constitute, for each ornament |O : Orn e D E|, the following isomorphism in |Ōrn / (I , D)|:
+\begin{equation}
+\begin{tikzpicture}[x=4em,y=4em,baseline=(B.base)]
+\node(T) {|Σ I (Inv' e) , ⌊ algOD D (clsAlg O) ⌋|};
+\node(T') [right=1 of T] {|J , E|};
+\node(M) at ($ (T) !.5! (T') $) [coordinate] {};
+\node(B) [below=1 of M] {|I , D|};
+\draw[->] (T)  edge node[below left ]{\llap{|proj₁ , ⌈ algOD D (clsAlg O) ⌉|}} (B)
+          (T') edge node[below right]{|e , O|} (B);
+\draw[<->] (T) edge node[horizontal label on arrow,yshift=0pt]{|≅*|} (T');
+\end{tikzpicture}
+\label{eq:AlgOrn-ClsAlg-inverse}
+\end{equation}
+The completeness theorem is then obtained by mapping these isomorphisms into |Fam| by |Ind ⋄ SliceF|.
+
+For the morphisms of |RAlg D|, a first thought might be adopting relational homomorphisms, which we have seen in \autoref{sec:fold-fusion} --- a relational homomorphism from an algebra |(X , R)| to another algebra |(Y , S)| is a relation |H : X ↝ Y| such that |H • R ≃ S • Ṙ D H|, or diagrammatically:
+\[ \begin{tikzpicture}[x=8em,y=2em,baseline=(RDH.base)]
+\node(X)                  {|X|};
+\node(Y)   [right=1 of X] {|Y|};
+\node(FDX) [below=1 of X] {|Ḟ D X|};
+\node(FDY) [below=1 of Y] {|Ḟ D Y|};
+\draw[->] (FDX) edge node     [left ] {|R|}     (X)
+          (FDY) edge node     [right] {|S|}     (Y)
+          (X)   edge node     [above] {|H|}     (Y)
+          (FDX) edge node(RDH)[below] {|Ṙ D H|} (FDY);
+\end{tikzpicture} \]
+Morphism equivalence is the equivalence of the relations between carriers, ignoring the homomorphism condition.
+It turns out, however, that this is not the right notion of homomorphisms for establishing the categorical equivalence.
+The right notion will surface as we construct the morphism part of |AlgOrn| below.
+
+The morphism part of |AlgOrn| maps a homomorphism from |(X , R)| to |(Y , S)| to a morphism in |Ōrn / (I , D)|:
+\[ \begin{tikzpicture}[x=17em, y=4em, baseline=(B.base)]
+\node(T) at (0, 1.3) {};
+\node(X) at (-.5, 1) {|Σ I X , ⌊ algOD D R ⌋|};
+\node(Y) at ( .5, 1) {|Σ I Y , ⌊ algOD D S ⌋|};
+\node(B) at (  0, 0) {|I , D|};
+\draw[->] (X) edge node[above,yshift=1pt]{|(goal()(0)) , (goal()(1))|} (Y)
+          (X) edge node[below left ]{|proj₁ , ⌈ algOD D R ⌉|} (B)
+          (Y) edge node[below right]{|proj₁ , ⌈ algOD D S ⌉|} (B);
+\end{tikzpicture} \]
+To make the diagram commute, Goal~0 should be of the form |id * h| for some \emph{function} |h : X ⇉ Y|, but the closest thing we have is merely a \emph{relation} between |X|~and~|Y| --- to have an ornament between descriptions, we need to specify computation on the index sets of the descriptions, which correspond to the carriers of relational algebras, and hence we should restrict |RAlg D| to include only \emph{functional} homomorphisms:
+\[ \begin{tikzpicture}[x=8em,y=2em, baseline=(RDh.base)]
+\node(X)                  {|X|};
+\node(Y)   [right=1 of X] {|Y|};
+\node(FDX) [below=1 of X] {|Ḟ D X|};
+\node(FDY) [below=1 of Y] {|Ḟ D Y|};
+\draw[->] (FDX) edge node       [left ] {|R|}           (X)
+          (FDY) edge node       [right] {|S|}           (Y)
+          (X)   edge node       [above] {|fun h|}       (Y)
+          (FDX) edge node (RDh) [below] {|Ṙ D (fun h)|} (FDY);
+\end{tikzpicture} \]
+The equivalence on them is refined to pointwise equality of the functions between carriers.
+
+We continue with Goal~1, which requires an ornament from |⌊ algOD D S ⌋| to |⌊ algOD D R ⌋|.
+Switching to the perspective of horizontal transformations, we should construct a shape transformation which essentially replaces a proof about~|R| with a proof about~|S| within a shape derived from algebraic ornamentation:
+For such shapes we have the following isomorphisms
+\begin{code}
+^^^algROD-iso :  {I : Set} (D' : RDesc I) {X : I → Set} (P : ℘ (⟦ D' ⟧ X)) →
+                 Ṡ (toRDesc (algROD D' P)) ≅ Σ (⟦ D' ⟧ X) P
+\end{code}
+whose implementation is, again, just rearrangement of data --- for example, the left-to-right direction is defined by
+\begin{code}
+^^^algROD-decomp :
+  {I : Set} (D' : RDesc I) (X : I → Set) (P : ℘ (⟦ D' ⟧ X)) →
+  Ṡ (toRDesc (algROD D P)) → Σ (⟦ D' ⟧ X) P
+algROD-decomp (ṿ is)    X P (xs , p , tt)  = xs , p
+algROD-decomp (σ S D')  X P (s , ss)       =
+  (pair s * id) (algROD-decomp (D' s) X (curry P s) ss)
+\end{code}
+By |algROD-iso| and |horizontal-iso|, the type of shapes for an algebraic response ornamentation can be decomposed into three parts:
+\begin{itemize}
+\item the type of shapes for the basic response description,
+\item the type of series of indices of the recursive positions, and
+\item the type of proofs about the basic shape and the indices.
+\end{itemize}
+(For example, in the case of |AlgList A R|, the three parts are
+\begin{itemize}
+\item the constructor field and the element field |a : A| from |ListD A|,
+\item the field |x' : X|, and
+\item the |rnil| and |rcons| fields.)
+\end{itemize}
+Expanding the definition of |algOD|~(\autoref{fig:algOD}), at Goal~1 we should construct for every |i : I| and |x : X i| a shape transformation
+\begin{equation}
+\begin{tikzpicture}[y=3em, baseline=(S.base)]
+\node(R) {|Ṡ (toRDesc (algROD (D i) ((R º) x)))|};
+\node(R') [below=1 of R] {|Σ (⟦ D i ⟧ X) ((R º) x)|};
+\node(S') [below=1 of R'] {|Σ (⟦ D i ⟧ Y) ((S º) (h x))|};
+\node(S) [below=1 of S'] {|Ṡ (toRDesc (algROD (D i) ((S º) (h x))))|};
+\draw[->] (R) edge node[right]{|Iso.to (algROD-iso (D i) ((R º) x)|} (R')
+          (R') edge node[right]{|mapRD (D i) h * (goal()(2))|} (S')
+          (S') edge node[right]{|Iso.from (algROD-iso (D i) ((S º) (h x))|}(S);
+\end{tikzpicture}
+\label{eq:algROD-shape-transformation}
+\end{equation}
+where Goal~2 requires a function of type
+\begin{code}
+{xs : ⟦ D i ⟧ X} → R xs x → S (mapRD (D i) h xs) (h x)
+\end{code}
+which, when suitably quantified, is a pointwise form of
+\begin{code}
+fun h • R ⊆ S • Ṙ D (fun h)
+\end{code}
+i.e., one direction of the homomorphism condition.
+This is actually the only direction of the homomorphism condition that we should impose on the functions between carriers; we denote it by the inclusion sign in the ``semi-commutative'' diagram:
+\[ \begin{tikzpicture}[x=8em, y=2em, baseline=(RDh.base)]
+\node(X)                  {|X|};
+\node(Y)   [right=1 of X] {|Y|};
+\node(FDX) [below=1 of X] {|Ḟ D X|};
+\node(FDY) [below=1 of Y] {|Ḟ D Y|};
+\draw[->] (FDX) edge node(R)  [left ] {|R|}           (X)
+          (FDY) edge node     [right] {|S|}           (Y)
+          (X)   edge node(h)  [above] {|fun h|}       (Y)
+          (FDX) edge node(RDh)[below] {|Ṙ D (fun h)|} (FDY);
+\node at (R -|| h) {|⊆*|};
+\end{tikzpicture} \]
+(The reason for requiring only one direction will become clear when we consider the morphism part of |ClsAlg|.)
+In short, the morphism part of |AlgOrn| treats the input homomorphism condition as a proof transformer, and apply that transformer to the proof encapsulated in the input shape.
+
+One of the functor laws we should prove for |AlgOrn| is that its morphism part preserves equivalence, and it is when doing so that we encounter the final problem: we need to prove that the shape transformation~(\ref{eq:algROD-shape-transformation}) --- whose behaviour depends on the \emph{computational content} of the homomorphism condition --- is extensionally the same for equivalent homomorphisms, but homomorphism equivalence as we defined it does not include any information about the homomorphism condition and is not strong enough.
+We thus see that proofs of the homomorphism condition should not be treated irrelevantly since they are used computation-relevantly in the shape transformations; we must take their behaviour into account when defining homomorphism equivalence.
+This brings us to the right notion of algebra homomorphisms, defined by
+\begin{code}
+record ^^^RAlgMorphism D (X , R) (Y , S) : Set₁ where
+  constructor ^^^pair ^^^_,_
+  field
+    h  : X ⇉ Y
+    c  : (i {-"\kern-1.1pt"-}:{-"\kern-1.1pt"-} I) {-"\kern-1.1pt"-} (xs {-"\kern-1.1pt"-}:{-"\kern-1.1pt"-} ⟦ D i ⟧ X) {-"\kern-1.1pt"-} (x {-"\kern-1.1pt"-}:{-"\kern-1.1pt"-} X i) {-"\kern-1.1pt"-} → {-"\kern-1.1pt"-} R xs x {-"\kern-1.1pt"-} → {-"\kern-1.1pt"-} S (mapRD (D i) h xs) (h x)
+\end{code}
+the equivalence on which is pointwise equality on \emph{both} components |h|~and~|c|.
+At the beginning of this chapter, we saw in the example about the classifying algebra for the ornament from natural numbers to lists that the relational language is used proof-relevantly, deviating from traditional relational theories; that deviation is fully manifested in this proof-relevant category of relational algebras and homomorphisms.
+
+Before we move on to the natural isomorphisms, it still remains to define |ClsAlg|.
+In particular, we should define the function |clsAlg| used in its object part:
+\begin{code}
+^^^clsAlg O : Ḟ D (Inv' e) ↝ Inv' e
+clsAlg O js (j , refl) =
+  let  (ss , ps) = Iso.to (horizontal-iso (D (e j)) (Inv' e)) js
+  in   (Σ'(ts ∶ Ṡ (E j)))  erase-Ṡ (O (ok j)) ts ≡ ss ×
+                           Ṗ-toList proj₁ (next (D (e j)) ss) ps ≡ next (E j) ts
+\end{code}
+The condition for saying that |js : ⟦ D (e j) ⟧ (Inv' e)| is mapped by |clsAlg O| to |j : J| is stated in terms of the two parts of~|js| decomposed by |horizontal-iso|:
+\begin{itemize}
+\item For the shape part |ss : Ṡ (D (e j))|, considering the completeness theorem, there should be enough information for promoting~|ss| to an inhabitant of |Ṡ (E j)|.
+Here for simplicity we require a complete inhabitant of |Ṡ (E j)| that erases to the given inhabitant of |Ṡ (D (e j))| by |erase-Ṡ (O (ok j))|.
+(In the example about the classifying algebra for the ornament from lists to ordered lists given at the beginning of this chapter, the representation of this part of the condition is optimised --- only an inhabitant of |b ≤ x| is required.)
+\item As for~|ps|, which is a series of recursively computed indices when |clsAlg O| is used in a fold, they should be equal to |next (E j) ts| when coerced to a |List J|, ensuring that the recursive classifications are successful.
+(This part of the condition corresponds to the proof obligation |b' ≡ x| in the aforementioned example.)
+\end{itemize}
+The morphism part of |ClsAlg| can then be constructed:
+\[ \begin{tikzpicture}[x=4em, y=2em, baseline=(P.base), text height=1.5ex, text depth=.25ex]
+\node(T)                 {|J , E|};
+\node(T') [right=1 of T] {|K , F|};
+\node(M) at ($ (T) !.5! (T') $) {};
+\node(B)  [below=1 of M] {|I , D|};
+\draw[->] (T)  edge node   [left , xshift=-5pt]{|e , O|} (B)
+          (T') edge node(P)[right, xshift= 5pt]{|f , P|} (B)
+          (T)  edge node[above]{|g , Q|} (T');
+\end{tikzpicture}
+\quad\mapsto\quad
+\begin{tikzpicture}[x=9em, y=2em, baseline=(R.base), text height=1.5ex, text depth=.25ex]
+\node(X)                  {|Inv' e|};
+\node(Y)   [right=1 of X] {|Inv' f|};
+\node(FDX) [below=1 of X] {|Ḟ D (Inv' e)|};
+\node(FDY) [below=1 of Y] {|Ḟ D (Inv' f)|};
+\draw[->] (FDX) edge node(R)  [left ] {|clsAlg O|}        (X)
+          (FDY) edge node     [right] {|clsAlg P|}        (Y)
+          (X)   edge node(h)  [above] {|fun (goal()(3))|} (Y)
+          (FDX) edge node(RDh)[below] {|Ṙ D (fun _)|}     (FDY);
+\node at (R -|| h) {|(goal(⊆*)(4))|};
+\end{tikzpicture} \]
+Goal~3 has type
+\begin{code}
+{i : I} → ((Σ'(j ∶ J)) e j ≡ i) → (Σ'(k ∶ K)) f k ≡ i
+\end{code}
+and can be easily discharged by~|g| and the proof |f ∘ g ≐ e| extracted from the commutative triangle.
+At Goal~4, we should transform a proof about |clsAlg O| to one about |clsAlg P|; expanding the definition of |clsAlg|, we should transform an inhabitant of |Ṡ (E j)| to one of |Ṡ (F (g j))| for every |j : J|, so |erase-Ṡ (Q (ok j))| does the job, modulo manipulation of the associated equations.
+(Here we see clearly that the homomorphism condition can only require the left-to-right direction, since it is the only direction that can be constructed from~|Q|.)
+
+Now we look at the natural isomorphism between |AlgOrn ⋄ ClsAlg| and the identity functor on |Ōrn / (I , D)| --- the construction of the other natural isomorphism between |ClsAlg ⋄ AlgOrn| and the identity functor on |RAlg D| is based on a similar analysis and omitted from the presentation.
+The components (indexed by ornaments) of the natural isomorphism were shown in~(\ref{eq:AlgOrn-ClsAlg-inverse}).
+Switching to horizontal transformations, we should construct an isomorphism between
+\[ |Ṡ (toRDesc (algROD (D (e j)) ((clsAlg O º) (j , refl))))| \qquad\text{and}\qquad |Ṡ (E j)| \]
+for each |j : J|, and make sure that its two directions make the corresponding triangles commute.
+For the left-to-right direction, by |algROD-iso|, the left-hand side decomposes into some |js : ⟦ D (e j) ⟧ (Inv' e)| and a proof of |clsAlg O js (j , refl)| --- the latter contains an inhabitant of |Ṡ (E j)|, which is exactly what we need.
+Conversely, any |ss : Ṡ (E j)| by itself uniquely determines a |js : ⟦ D (e j) ⟧ (Inv' e)| and a proof of |clsAlg O js (j , refl)| that contains~|ss|, since the equations in |clsAlg| completely specifies what |js|~should be.
+The two directions are inverse to each other because all that is involved is rearrangement of data, and the corresponding triangles commute because (in particular) the fields from~|D| are not modified.
+We also need to establish naturality of one of the natural transformations (naturality of the other natural transformation can be derived from the componentwise isomorphisms); here we choose the left-to-right direction.
+Let |m|~be a morphism in |Ōrn / (I , D)|:
+\[ \begin{tikzpicture}[x=4em, y=2em, baseline=(P.base), text height=1.5ex, text depth=.25ex]
+\node(T)                 {|J , E|};
+\node(T') [right=1 of T] {|K , F|};
+\node(M) at ($ (T) !.5! (T') $) {};
+\node(B)  [below=1 of M] {|I , D|};
+\draw[->] (T)  edge node   [left ,xshift=-4pt,yshift=-2pt]{|e , O|} (B)
+          (T') edge node(P)[right,xshift= 4pt,yshift=-2pt]{|f , P|} (B)
+          (T)  edge node[above]{|g , Q|} (T');
+\end{tikzpicture} \]
+Because the equivalence on slice morphisms ignores the commutative triangles, we only need to establish commutativity of the following square in |Ōrn|:
+\[ \begin{tikzpicture}[x=3em, y=3em, baseline=(P.base), text height=1.5ex, text depth=.25ex]
+\node(FX)                 {|Σ I (Inv' e) , ⌊ algOD D (clsAlg O) ⌋|};
+\node(X)  [right=1 of FX] {|J , E|};
+\node(FY) [below=1 of FX] {|Σ I (Inv' f) , ⌊ algOD D (clsAlg P) ⌋|};
+\node(Y)  [below=1 of X ] {|K , F|};
+\draw[->] (FX) edge node[above]{|φ O|} (X)
+          (FY) edge node(P)[below]{|φ P|} (Y)
+          (FX) edge node[left ]{|morphism (SliceF ⋄ AlgOrn ⋄ ClsAlg) m|} (FY)
+          (X)  edge node[right]{|g , Q|} (Y);
+\end{tikzpicture} \]
+where |φ|~denotes the components of the natural transformation sketched above.
+Switching to horizontal transformations, the vertical morphisms essentially replace a shape of type |Ṡ (E j)| (for some suitable |j : J|) with one of type |Ṡ (F (g j))| by |erase-Ṡ (Q (ok j))|, while the horizontal ones extract those shapes.
+The two operations are independent, and hence the diagram commutes.
+
+\section{Consequences}
+\label{sec:equivalence-consequences}
+
+We began this chapter with the completeness theorem, and, with some effort, have extended it to a categorical equivalence.
+The extra effort is not wasted: the categorical equivalence allows us to perform reasoning across the boundary between ornaments and relational algebras easily.
+Below we give two examples that connect ornamental and relational algebraic constructions via the categorical equivalence.
+
+\subsection{Parallel composition and the banana-split law}
+\label{sec:banana-split}
+
+A standard categorical result is that any functor taking part in a categorical equivalence necessarily preserves all universal constructions (limits and colimits, to be precise).
+The same type of universal constructions in two equivalent categories can then be thought of as being in correspondence.
+For example:
+We have seen in \autoref{sec:parallel-composition-pullback} that parallel composition gives rise to a pullback square~(\ref{eq:pc-square}) in |Ōrn|, which is a product in |Ōrn / (I , D)|.
+The functor |ClsAlg| --- being part of a categorical equivalence --- preserves products, so the image of~(\ref{eq:pc-square}) under |ClsAlg| in |RAlg D| is also a product, and is thus isomorphic to any product in |RAlg D|; conversely, any product in |RAlg D| when mapped to |Ōrn / (I , D)| by |AlgOrn| is also isomorphic to~(\ref{eq:pc-square}).
+Below we look at a consequence of the latter direction.
+
+In |RAlg D|, a construction of products is inspired by the \key{banana-split law}~\citep[page~88]{Fokkinga-thesis}, whose original, functional form is as follows:
+Define the functorial mapping |Ḟ-map D| by
+\begin{code}
+^^^Ḟ-map ^^^F-map D : {Z W : I → Set} → (Z ⇉ W) → (Ḟ D Z ⇉ Ḟ D W)
+Ḟ-map D f {i} = mapRD (D i) f
+\end{code}
+For any |f : Ḟ D X ⇉ X| and |g : Ḟ D Y ⇉ Y| we have
+\begin{code}
+fold f ▵ fold g ≐ fold ((f ∘ Ḟ-map D proj₁) ▵ (g ∘ Ḟ-map D proj₂))
+\end{code}
+The left-hand side of the equation traverses a |(μ D)|-inhabitant by two independent folds, while the right-hand side combines the two traversals into a single fold using a composite algebra.
+This composite algebra, when generalised straightforwardly to relations, gives rise to a product in |RAlg D|:
+Let |R : Ḟ D X ↝ X| and |S : Ḟ D Y ↝ Y|.
+We define the ``banana-split algebra'' of |R|~and~|S| by
+\begin{code}
+^^^BSAlg R S : Ḟ D (X ×' Y) ↝ (X ×' Y)
+BSAlg R S xys (x , y) = R (Ḟ-map D proj₁ xys) x × S (Ḟ-map D proj₂ xys) y
+\end{code}
+where |(X ^^^×' ^^^_×'_ ^^^_×'_ Y) i = X i × Y i|.
+We can then construct the following span
+\[ \begin{tikzpicture}[x=10em, y=3em, baseline=(FDZ.base)]
+\node(Z)                  {|X ×' Y|};
+\node(FDZ) [below=1 of Z, text height=1.5ex, text depth=0ex] {|Ḟ D (X ×' Y)|};
+\node(X)   [left =1 of Z] {|X|};
+\node(FDX) [below=1 of X, text height=1.5ex, text depth=0ex] {|Ḟ D X|};
+\node(Y)   [right=1 of Z] {|Y|};
+\node(FDY) [below=1 of Y, text height=1.5ex, text depth=0ex] {|Ḟ D Y|};
+\draw[->] (FDZ) edge node(T)[label on arrow]     {|BSAlg R S|}       (Z)
+          (FDX) edge node   [left]               {|R|\vphantom{g}}   (X)
+          (FDY) edge node   [right]              {|S|\vphantom{g}}   (Y)
+          (Z)   edge node(L)[above, yshift=-2pt] {|fun proj₁|}       (X)
+          (Z)   edge node(R)[above, yshift=-2pt] {|fun proj₂|}       (Y)
+          (FDZ) edge node   [below]              {|Ṙ D (fun proj₁)|} (FDX)
+          (FDZ) edge node   [below]              {|Ṙ D (fun proj₂)|} (FDY);
+\node at (T -|| L) {|⊇*|};
+\node at (T -|| R) {|⊆*|};
+\end{tikzpicture} \]
+where the homomorphism conditions are simply projections, and it is easy to prove that the span is a product.
+The categorical equivalence between |RAlg D| and |Ōrn / (I , D)| implies that the image of the product under |AlgOrn| is a pullback in |Ōrn|:
+\[ \kern18.6pt\begin{tikzpicture}[x=19em, y=12em, baseline=(D.base)]
+\node(D) at (1, 0) {|I , D|};
+\node(E) at (0, 0) {|Σ I X , ⌊ algOD D R ⌋|};
+\node(F) at (1, .5) {|Σ I Y , ⌊ algOD D S ⌋|};
+\node(P) at (0, .5) {|Σ I (X ×' Y) , ⌊ algOD D (BSAlg R S) ⌋|};
+\draw[ultra thick] (.03, .355) -- (.07, .355) -- (.07, .425);
+\path[->, font=\small]
+(E) edge node[below]{|proj₁ , ⌈ algOD D R ⌉|} (D)
+(F) edge node[label on arrow]{|proj₁ , ⌈ algOD D S ⌉|} (D)
+(P) edge node[horizontal label on arrow]{~~|proj₁ , _|~~~} (D)
+(P) edge node[left]{|id * proj₁ , _|} (E)
+(P) edge node[above]{|id * proj₂ , _|} (F);
+\end{tikzpicture} \]
+which is isomorphic to the pullback square derived from parallel composition:
+\[ \begin{tikzpicture}[x=19em, y=12em, baseline=(D.base)]
+\node(D) at (1, 0) {|I , D|};
+\node(E) at (0, 0) {|Σ I X , ⌊ algOD D R ⌋|};
+\node(F) at (1, .5) {|Σ I Y , ⌊ algOD D S ⌋|};
+\node(P) at (0, .5) {|outl ⋈ outl , ⌊ ⌈ algOD D R ⌉ ⊗ ⌈ algOD D S ⌉ ⌋|};
+\draw[ultra thick] (.03, .355) -- (.07, .355) -- (.07, .425);
+\path[->, font=\small]
+(E) edge node[below]{|proj₁ , ⌈ algOD D R ⌉|} (D)
+(F) edge node[label on arrow]{|proj₁ , ⌈ algOD D S ⌉|} (D)
+(P) edge node[horizontal label on arrow]{~~|pull , _|~~~} (D)
+(P) edge node[left]{|π₁ , _|} (E)
+(P) edge node[above]{|π₂ , _|} (F);
+\end{tikzpicture} \]
+This shows, in particular, that the parallel composition of the two algebraic ornamentations using |R|~and~|S| respectively is isomorphic to the algebraic ornamentation using |BSAlg R S|.
+
+\subsection{Ornamental algebraic ornamentation}
+\label{sec:OAO}
+
+In previous work~\citep{Ko-OAOAOO}, promotion predicates were computed from ornaments by ``ornamental algebraic ornamentation'', i.e., algebraic ornamentation with an ornamental algebra.
+This dissertation, on the other hand, uses parallel composition with singleton ornamentation to compute (optimised) ornamental promotion predicates.
+Using a part of the categorical equivalence, we can show that the two approaches indeed yield isomorphic predicates by reasoning in terms of relational algebras.
+
+Let |O : Orn e D E| where |D : Desc I| and |E : Desc J|.
+Our goal is to show that the datatype obtained by algebraic ornamentation of~|E| using the ornamental algebra
+\begin{code}
+fun (ornAlg O) : Ḟ E (μ D ∘ e) ↝ (μ D ∘ e)
+\end{code}
+is isomorphic to the optimised predicate datatype for~|O|, i.e.,
+\begin{code}
+Iso Fam  (Σ J (μ D ∘ e)  , μ ⌊ algOD E (fun (ornAlg O)) ⌋)
+         (e ⋈ proj₁      , μ ⌊ O ⊗ ⌈ S ⌉ ⌋)
+\end{code}
+where |S = singletonOD D|.
+By isomorphism preservation of |Ind|, it suffices to establish
+\begin{flalign}
+&\hskip\mathindent |Iso Ōrn|~           |(Σ J (μ D ∘ e)|~|, ⌊ algOD E (fun (ornAlg O)) ⌋)| & \nonumber \\[-3pt]
+&\hskip\mathindent \phantom{|Iso Ōrn|}~ \rlap{|(e ⋈ proj₁|}\phantom{|(Σ J (μ D ∘ e)|}~|, ⌊ O ⊗ ⌈ S ⌉ ⌋)| & \label{eq:OAO-Orn}
+\end{flalign}
+We are attempting to establish that an algebraic ornamentation of~|E| is isomorphic to some other description; if that description is also an algebraic ornamentation of~|E|, then we can just reason in terms of their algebras.
+This is easy: from any ornament |P : Orn f E ⌊ O ⊗ ⌈ S ⌉ ⌋| we get an isomorphism 
+\begin{code}
+Iso Ōrn  (e ⋈ proj₁     , ⌊ O ⊗ ⌈ S ⌉ ⌋)
+         (Σ J (Inv' f)  , ⌊ algOD E (clsAlg P) ⌋)
+\end{code}
+and there is an obvious choice of~|P| --- |diffOrn-l O ⌈ S ⌉|.
+The proof obligation thus reduces to
+\begin{code}
+Iso Ōrn  (Σ J (μ D ∘ e)  , ⌊ algOD E (fun (ornAlg O)) ⌋)
+         (Σ J (Inv' π₁)  , ⌊ algOD E (clsAlg (diffOrn-l O ⌈ S ⌉)) ⌋)
+\end{code}
+which, by isomorphism preservation of |SliceF ⋄ AlgOrn|, is further reduced to
+\begin{flalign}
+&\hskip\mathindent |Iso (RAlg E)|~           \rlap{|(μ D ∘ e|}\phantom{|(Inv' π₁|}~|, fun (ornAlg O))| & \nonumber \\[-3pt]
+&\hskip\mathindent \phantom{|Iso (RAlg E)|}~ |(Inv' π₁|~|, clsAlg (diffOrn-l O ⌈ S ⌉))| & \label{eq:OAO-RAlg}
+\end{flalign}
+Through the categorical equivalence, reasoning about datatypes is now reduced to reasoning about algebras.
+For the carriers, we need to show
+\begin{code}
+μ D (e j) ≅ (Σ'(p ∶ e ⋈ proj₁)) π₁ p ≡ j
+\end{code}
+for every |j : J|, which is easy since the canonical form of~|p| is |(ok j , ok (e j , d))| for some |d : μ D (e j)|.
+Call the left-to-right direction of the isomorphism |wrap|:
+\begin{code}
+^^^wrap : {j : J} → μ D (e j) → (Σ'(p ∶ e ⋈ outl)) π₁ p ≡ j
+wrap {j} d = (ok j , ok (e j , d)) , refl
+\end{code}
+For the algebras, however, it seems that we can only dig painfully into the definitions.
+Here is an informal (but already painful) analysis explaining why the two algebras express the same relationship:
+Let |j : J|, |ds : ⟦ E j ⟧ (μ D ∘ e)|, and |d : μ D (e j)|.
+\begin{itemize}
+\item The type |fun (ornAlg O) ds d| reduces to |con (erase O ds) ≡ d|.
+Matching~|d| with |con ds'| where |ds' : ⟦ D (e j) ⟧ (μ D)|, we get to an isomorphic type |erase O ds ≡ ds'|.
+Since |erase| modifies only the shape part, this decomposes into two conditions: \,(i)~that the result of applying |erase-Ṡ (O (ok j))| to the shape part of~|ds| is equal to the shape part of~|ds'|, and \,(ii)~that the series of |(μ D)|-inhabitants contained in |ds|~and~|ds'| are equal.
+\item On the other hand, setting |wds = mapRD (E j) wrap ds|, a proof of type
+\begin{code}
+clsAlg (diffOrn-l O ⌈ S ⌉) wds (wrap (con ds'))
+\end{code}
+contains a shape of type
+\begin{code}
+Ṡ (toRDesc (pcROD (O (ok j)) (⌈ S ⌉ (ok (e j , con ds')))))
+\end{code}
+satisfying the associated equations.
+By |pcROD-iso|, this decomposes into two shapes |ts : Ṡ (E j)| and |ss : Ṡ (⌊ S ⌋ (e j , con ds'))| such that
+\begin{code}
+erase-Ṡ (O (ok j)) ts ≡ erase-Ṡ (⌈ S ⌉ (ok (e j , con ds'))) ss
+\end{code}
+The right-hand side is equal to the shape part of~|ds'|, and by the first equation associated with~|ts|, the left-hand side is equal to the result of applying |erase-Ṡ (O (ok j))| to the shape part of~|wds|, i.e., the shape part of~|ds| --- this corresponds to condition~(i).
+For condition~(ii), |⌊ S ⌋| uses the |(μ D)|-inhabitants contained in~|ds'| as the indices at the recursive positions, which, by the second equation associated with~|ts|, are just the |(μ D)|-inhabitants contained in~|wds|, i.e., those contained in~|ds|.
+\end{itemize}
+
+
+\section{Discussion}
+\label{sec:equivalence-discussion}
+
+As mentioned at the beginning of the chapter, these results are only partially formalised.
+Specifically, the formalised results include
+\begin{itemize}
+\item everything in \autoref{sec:ornaments-and-horizontal-transformations},
+\item general definition of categorical equivalences (which, unlike general isomorphisms of categories, can be easily defined with our formalisation of categories),
+\item definition of |RAlg|,
+\item the isomorphism |algROD-iso|,
+\item the completeness theorem~(\ref{eq:AlgOrn-ClsAlg-inverse}) for a different version of classifying algebras, and
+\item the banana-split algebra as a product in |RAlg|.
+\end{itemize}
+The rest are worked out on paper, skipping over impractically tedious type-theoretic detail --- the problems about formalisation mentioned in \autoref{sec:categorical-discussion} escalate into unmanageable ones for the constructions in this chapter due to their greater complexity.
+In general, while the internalist typing of constructions about descriptions and ornaments works well in \autoref{chap:refinements-and-ornaments}, ensuring that every expression we write down makes sense, the encoded constraints need to be reasoned about non-trivially in this chapter, and this is greatly hindered because the constraints are implicitly coupled with the expressions in a particular way --- here externalism could be much more helpful.
+For a simplest example, in this chapter we silently abandon the internalist type |Inv| and switch to the externalist type |Inv'|; Goal~3 is much easier to discharge as a consequence.
+Another example is classifying algebras, which (as mentioned above) were defined differently such that they were directly related to optimised predicates~(\autoref{sec:optimised-predicates}).
+This alternative definition yields optimised representation of membership proofs about classifying algebras, but the representation is more complicated and makes the categorical equivalence more difficult to construct.
+Hence in this dissertation we switch to an externalist definition of classifying algebras instead.
+
+The categorical equivalence prompts us to contemplate again why we need ornaments: if relational algebras can express the same refinement relationship between datatypes as ornaments, and can offer corresponding constructions as shown in \autoref{sec:banana-split}, what extra benefit do ornaments provide that justifies their existence?
+Firstly, relational algebras describe how to classify inhabitants of existing datatypes to obtain more informative datatypes, and hence correspond more closely to \emph{ornamental descriptions}, which are more restrictive than ornaments as explained in the beginning of \autoref{sec:ornament-refinement-discussion} --- indeed, the categorical equivalence is between |RAlg| and the \emph{slice category} on top of |Ōrn|.
+Even when we restrict the comparison to one between relational algebras and ornamental descriptions, the latter still offer finer-grained control of representation, down to the level of individual fields.
+For example, while we can get a datatype of vectors by specialising |AlgList| with a suitable algebra, the index-first, representation-optimised version can only be obtained via ornamentation.
+We can thus think of ornamental descriptions as a form of relational algebras that allow us to additionally specify representation optimisation, and the categorical equivalence lets us switch between the two forms of specifications of datatype refinement relationships.
+
+The example about ornamental algebraic ornamentation in \autoref{sec:OAO} shows that we can reduce reasoning about datatypes to reasoning about algebras via the categorical equivalence.
+The discharging of the proof obligation~(\ref{eq:OAO-RAlg}) is unsatisfactory, however --- discharging the earlier proof obligation~(\ref{eq:OAO-Orn}) could in fact be more straightforward.
+For the reduction to be justified, reasoning about algebras has to be easier, e.g., in the calculational style of \citet{Bird-AoP}.
+This requires formulation of calculational laws for algebras defined datatype-generically on top of the universes of descriptions and ornaments; furthermore, these laws have to be strengthened to establish isomorphisms --- rather than merely bi-implications --- between algebras.
+(The lemma |fun-preserves-fold| stated at the end of \autoref{sec:relations} is an example.)
+In short: the categorical equivalence points out not only the possibility of reasoning about datatypes algebraically, but also the need for algebraic reasoning to receive a \emph{proof-relevant} revision for that purpose.
